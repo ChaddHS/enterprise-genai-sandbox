@@ -12,6 +12,8 @@ dotnet/.config
 *.userosscache
 *.sln.docstates
 
+scripts/dotnet-sdk-7.0.400-linux-x64.tar
+
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 

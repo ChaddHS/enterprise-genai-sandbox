@@ -136,7 +136,7 @@ if [ $? -ne 0 ]; then
 fi
 
 echo "Deploying webapp..."
-swa deploy --subscription-id $SUBSCRIPTION --app-name $WEB_APP_NAME --env production
+swa deploy --subscription-id $SUBSCRIPTION --app-name $WEB_APP_NAME --env production --no-use-keychain
 if [ $? -ne 0 ]; then
     echo "Failed to deploy webapp"
     exit 1

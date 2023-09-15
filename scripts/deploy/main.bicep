@@ -440,6 +440,8 @@ param publicIpSku string = 'Basic'
 param OSVersion string = '2022-datacenter-azure-edition'
 
 @description('Size of the virtual machine.')
+
+// vmsize Standard_D2ds_v4 is required if you deploy bastion host and intend to run nested vm (for example wsl2)
 param vmSize string = 'Standard_D2ds_v4'
 
 // @description('Location for all resources.')
@@ -497,6 +499,11 @@ resource openAI 'Microsoft.CognitiveServices/accounts@2022-12-01' = if (deployNe
   properties: {
     customSubDomainName: toLower(uniqueName)
     publicNetworkAccess: contains(deployment, 'private') ? 'Disabled' : 'Enabled'
+    //publicNetworkAccess: 'Enabled'
+
+    networkAcls: {
+      defaultAction: 'Allow'
+    }
 
   }
 }
@@ -556,9 +563,24 @@ resource openaiSymbolicname 'Microsoft.Network/privateDnsZones/A@2020-06-01' = i
 
   }
 
-  dependsOn: [
-    // openaiPrivateEndpoint
-  ]
+  dependsOn: []
+}
+
+resource openaiSymbolicname2 'Microsoft.Network/privateDnsZones/A@2020-06-01' = if (deployment == 'private') {
+  name: toLower(uniqueName)
+  parent: openaiDNSZone
+
+  properties: {
+    ttl: 3600
+    aRecords: [
+      {
+        ipv4Address: openaiPrivateEndpoint.properties.customDnsConfigs[0].ipAddresses[0]
+      }
+    ]
+
+  }
+
+  dependsOn: []
 }
 
 resource openaiCognitiveservicesDNSZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if (deployment == 'private') {
@@ -714,9 +736,7 @@ resource sitesSymbolicname 'Microsoft.Network/privateDnsZones/A@2020-06-01' = if
 
   }
 
-  dependsOn: [
-    //  appPrivateEndpoint
-  ]
+  dependsOn: []
 }
 
 // resource appPrivateEndpointscm 'Microsoft.Network/privateEndpoints@2023-04-01' = if (deployment == 'private') {
@@ -774,9 +794,7 @@ resource sitesSymbolicnamescm 'Microsoft.Network/privateDnsZones/A@2020-06-01' =
 
   }
 
-  dependsOn: [
-    // appPrivateEndpointscm
-  ]
+  dependsOn: []
 }
 
 resource appServiceWebConfig 'Microsoft.Web/sites/config@2022-09-01' = {
@@ -1269,9 +1287,7 @@ resource staSymbolicname 'Microsoft.Network/privateDnsZones/A@2020-06-01' = if (
 
   }
 
-  dependsOn: [
-    // staPrivateEndpoint
-  ]
+  dependsOn: []
 }
 
 resource appServicePlanQdrant 'Microsoft.Web/serverfarms@2022-03-01' = if (memoryStore == 'Qdrant') {
@@ -1400,9 +1416,7 @@ resource acsSymbolicname 'Microsoft.Network/privateDnsZones/A@2020-06-01' = if (
 
   }
 
-  dependsOn: [
-    // acsPrivateEndpoint
-  ]
+  dependsOn: []
 }
 
 resource virtualNetwork 'Microsoft.Network/virtualNetworks@2021-05-01' = {
@@ -1804,9 +1818,7 @@ resource cosmosSymbolicname 'Microsoft.Network/privateDnsZones/A@2020-06-01' = i
 
   }
 
-  dependsOn: [
-    // cosmosPrivateEndpoint
-  ]
+  dependsOn: []
 }
 
 // Postgres persistent store
@@ -1988,9 +2000,7 @@ resource swaSymbolicname 'Microsoft.Network/privateDnsZones/A@2020-06-01' = if (
 
   }
 
-  dependsOn: [
-    // swaPrivateEndpoint
-  ]
+  dependsOn: []
 }
 
 // Deploy VM
@@ -2051,10 +2061,7 @@ resource nic 'Microsoft.Network/networkInterfaces@2022-05-01' = if (deployment =
       }
     ]
   }
-  dependsOn: [
-
-    // virtualNetwork
-  ]
+  dependsOn: []
 }
 
 resource vm 'Microsoft.Compute/virtualMachines@2022-03-01' = if (deployment == 'private') {

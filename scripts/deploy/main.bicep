@@ -583,24 +583,24 @@ resource openaiSymbolicname2 'Microsoft.Network/privateDnsZones/A@2020-06-01' = 
   dependsOn: []
 }
 
-resource openaiCognitiveservicesDNSZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if (deployment == 'private') {
-  name: 'privatelink.cognitiveservices.azure.com'
-  location: 'global'
-  tags: tags
-}
+// resource openaiCognitiveservicesDNSZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if (deployment == 'private') {
+//   name: 'privatelink.cognitiveservices.azure.com'
+//   location: 'global'
+//   tags: tags
+// }
 
-resource openaiCognitiveservicesDNSZoneVirtualNetworkLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = if (deployment == 'private') {
-  parent: openaiCognitiveservicesDNSZone
-  name: 'openai-cognitiveservices-${uniqueName}-vnl'
-  location: 'global'
-  tags: tags
-  properties: {
-    virtualNetwork: {
-      id: virtualNetwork.id
-    }
-    registrationEnabled: false
-  }
-}
+// resource openaiCognitiveservicesDNSZoneVirtualNetworkLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = if (deployment == 'private') {
+//   parent: openaiCognitiveservicesDNSZone
+//   name: 'openai-cognitiveservices-${uniqueName}-vnl'
+//   location: 'global'
+//   tags: tags
+//   properties: {
+//     virtualNetwork: {
+//       id: virtualNetwork.id
+//     }
+//     registrationEnabled: false
+//   }
+// }
 
 // resource openAI_completionModel 'Microsoft.CognitiveServices/accounts/deployments@2022-12-01' = if (deployNewAzureOpenAI) {
 //   //resource openAI_completionModel 'Microsoft.CognitiveServices/accounts/deployments@2022-12-01' = if (deployNewAzureOpenAI) {

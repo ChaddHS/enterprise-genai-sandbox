@@ -112,32 +112,32 @@ param vnetCIDR string = '10.245.16.0/24'
 
 // '172.22.26.0/24'
 
-@description('web subnet')
-param subnet1 object = {
-  name: 'webSubnet'
-  subnet: '172.22.26.0/26'
-}
-@description('qdrant subnet')
-param subnet2 object = {
-  name: 'qdrantSubnet'
-  subnet: '172.22.26.64/26'
-}
+// @description('web subnet')
+// param subnet1 object = {
+//   name: 'webSubnet'
+//   subnet: '172.22.26.0/26'
+// }
+// @description('qdrant subnet')
+// param subnet2 object = {
+//   name: 'qdrantSubnet'
+//   subnet: '172.22.26.64/26'
+// }
 
-@description('postgres subnet')
-param subnet3 object = {
-  name: 'postgresSubnet'
-  subnet: '172.22.26.128/27'
-}
-@description('privatelinksubnet')
-param subnet4 object = {
-  name: 'websubnet'
-  subnet: '172.22.26.160/27'
-}
-@description('bastion')
-param subnet5 object = {
-  name: 'bastionSubnet'
-  subnet: '172.22.26.224/29'
-}
+// @description('postgres subnet')
+// param subnet3 object = {
+//   name: 'postgresSubnet'
+//   subnet: '172.22.26.128/27'
+// }
+// @description('privatelinksubnet')
+// param subnet4 object = {
+//   name: 'websubnet'
+//   subnet: '172.22.26.160/27'
+// }
+// @description('bastion')
+// param subnet5 object = {
+//   name: 'bastionSubnet'
+//   subnet: '172.22.26.224/29'
+// }
 
 @description('Hash of the resource group ID')
 var rgIdHash = uniqueString(resourceGroup().id)

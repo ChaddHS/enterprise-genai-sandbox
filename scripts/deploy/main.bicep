@@ -9,8 +9,8 @@ Bicep template for deploying CopilotChat Azure resources.
 param name string = 'copichat'
 
 @description('SKU for the Azure App Service plan')
-@allowed([ 'B1', 'S1', 'S2', 'S3', 'P1V3', 'P2V3', 'I1V2', 'I2V2' ])
-param webAppServiceSku string = 'S1'
+@allowed([ 'B1', 'B3', 'S1', 'S2', 'S3', 'P1V3', 'P2V3', 'I1V2', 'I2V2' ])
+param webAppServiceSku string = 'S3'
 
 @description('Location of package to deploy as the web service')
 #disable-next-line no-hardcoded-env-urls
@@ -108,6 +108,37 @@ param location string = 'eastus'
 ])
 param webappLocation string = 'westus2'
 
+param vnetCIDR string = '10.245.16.0/24'
+
+// '172.22.26.0/24'
+
+@description('web subnet')
+param subnet1 object = {
+  name: 'webSubnet'
+  subnet: '172.22.26.0/26'
+}
+@description('qdrant subnet')
+param subnet2 object = {
+  name: 'qdrantSubnet'
+  subnet: '172.22.26.64/26'
+}
+
+@description('postgres subnet')
+param subnet3 object = {
+  name: 'postgresSubnet'
+  subnet: '172.22.26.128/27'
+}
+@description('privatelinksubnet')
+param subnet4 object = {
+  name: 'websubnet'
+  subnet: '172.22.26.160/27'
+}
+@description('bastion')
+param subnet5 object = {
+  name: 'bastionSubnet'
+  subnet: '172.22.26.224/29'
+}
+
 @description('Hash of the resource group ID')
 var rgIdHash = uniqueString(resourceGroup().id)
 
@@ -156,6 +187,9 @@ param staticWebAppTier object = {
 
 @description('Kaplan\'s PAT addresses')
 param kaplanIps array = [
+  '10.0.0.0/8'
+  '172.16.0.0/12'
+  '192.168.0.0/16'
   '72.166.181.0/24'
   '72.166.187.0/24'
   '208.44.193.0/24'
@@ -377,6 +411,45 @@ param kaplanIps array = [
   '54.81.154.214/32'
   '96.60.175.227'
 ]
+
+//
+// Azure API management
+//
+//
+@description('deploy API Management')
+param deployAPIm string = 'yes'
+
+@description('deploy API Management private or public')
+param deployPrivateAPIm string = 'yes'
+
+@description('The name of the API Management service instance')
+param apiManagementServiceName string = 'apiservice${uniqueString(resourceGroup().id)}'
+
+@description('The email address of the owner of the service')
+@minLength(1)
+param publisherEmail string = 'christopher.tatro@kaplan.edu'
+
+@description('The name of the owner of the service')
+@minLength(1)
+param publisherName string = 'Chris Tatro'
+
+@description('The pricing tier of this API Management service')
+@allowed([
+  'Developer'
+  'Standard'
+  'Premium'
+])
+param sku string = 'Developer'
+
+@description('The instance size of this API Management service.')
+@allowed([
+  1
+  2
+])
+param skuCount int = 1
+
+// @description('Location for all resources.')
+// param location string = resourceGroup().location
 
 // VM configuration
 //
@@ -1430,14 +1503,14 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2021-05-01' = {
 
     addressSpace: {
       addressPrefixes: [
-        '10.245.16.0/24'
+        vnetCIDR
       ]
     }
     subnets: [
       {
         name: 'webSubnet'
         properties: {
-          addressPrefix: '10.245.16.0/26'
+          addressPrefix: '172.22.26.0/26'
           networkSecurityGroup: {
             id: webNsg.id
           }
@@ -1464,7 +1537,7 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2021-05-01' = {
       {
         name: 'qdrantSubnet'
         properties: {
-          addressPrefix: '10.245.16.64/26'
+          addressPrefix: '172.22.26.64/26'
           networkSecurityGroup: {
             id: qdrantNsg.id
           }
@@ -1491,7 +1564,7 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2021-05-01' = {
       {
         name: 'postgresSubnet'
         properties: {
-          addressPrefix: '10.245.16.128/27'
+          addressPrefix: '172.22.26.128/27'
           serviceEndpoints: []
           delegations: []
           privateEndpointNetworkPolicies: 'Disabled'
@@ -1503,7 +1576,7 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2021-05-01' = {
       {
         name: 'privateEndpointSubnet'
         properties: {
-          addressPrefix: '10.245.16.160/27'
+          addressPrefix: '172.22.26.160/27'
           serviceEndpoints: []
           delegations: []
           privateEndpointNetworkPolicies: 'Enabled'
@@ -1515,7 +1588,7 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2021-05-01' = {
       {
         name: 'bastionSubnet'
         properties: {
-          addressPrefix: '10.245.16.192/27'
+          addressPrefix: '172.22.26.224/29'
           networkSecurityGroup: {
             id: bastionnsg.id
           }
@@ -2113,6 +2186,136 @@ resource vm 'Microsoft.Compute/virtualMachines@2022-03-01' = if (deployment == '
     //securityProfile: ((securityType == 'TrustedLaunch') ? securityProfileJson : null)
   }
 }
+
+// Deploy Azure API Management
+
+resource apiManagementService 'Microsoft.ApiManagement/service@2021-08-01' = {
+  name: apiManagementServiceName
+  location: location
+  sku: {
+    name: sku
+    capacity: skuCount
+  }
+  properties: {
+    publisherEmail: publisherEmail
+    publisherName: publisherName
+  }
+}
+
+resource apimPrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-04-01' = if (deployAPIm == 'yes') {
+  name: 'apim-${uniqueName}-pe'
+  location: location
+  tags: tags
+  properties: {
+    subnet: {
+      id: virtualNetwork.properties.subnets[3].id
+    }
+    privateLinkServiceConnections: [
+      {
+        name: 'apim'
+        properties: {
+          privateLinkServiceId: apiManagementService.id
+          groupIds: [
+            'Gateway'
+          ]
+        }
+      }
+    ]
+  }
+}
+
+resource apimDNSZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if (deployPrivateAPIm == 'yes') {
+  name: 'privatelink.azure-api.net'
+  location: 'global'
+  tags: tags
+}
+
+resource apimVirtualNetworkLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = if (deployPrivateAPIm == 'yes') {
+  parent: apimDNSZone
+  name: 'apim-${uniqueName}-vnl'
+  location: 'global'
+  tags: tags
+  properties: {
+    virtualNetwork: {
+      id: virtualNetwork.id
+    }
+    registrationEnabled: false
+  }
+}
+
+//var swaHostname = split(staticWebApp.properties.defaultHostname, '.')[0]
+
+resource apimSymbolicname 'Microsoft.Network/privateDnsZones/A@2020-06-01' = if (deployPrivateAPIm == 'yes') {
+  name: apiManagementService.name
+  //name: swaHostname
+  //name: staticWebApp
+  parent: apimDNSZone
+
+  properties: {
+    ttl: 3600
+
+    aRecords: [
+      {
+        //  ipv4Address: '192.168.1.1'
+
+        ipv4Address: apimPrivateEndpoint.properties.customDnsConfigs[0].ipAddresses[0]
+      }
+    ]
+
+  }
+
+  dependsOn: []
+}
+
+@description('Remote Vnet')
+param remoteVirtualNetworkId string = '/subscriptions/11b1e7dd-d35d-435f-9c04-274e5e673671/resourceGroups/usnc-core01/providers/Microsoft.Network/virtualNetworks/usnc-vnet-core01'
+
+@allowed([ 'yes', 'no' ])
+@description('Deploy VNet peering')
+param deployVnetPeering string = 'yes'
+
+resource coreVNET 'Microsoft.Network/virtualNetworks@2021-05-01' existing = {
+  name: 'usnc-vnet-core01'
+  scope: resourceGroup('11b1e7dd-d35d-435f-9c04-274e5e673671', 'usnc-core01')
+}
+
+resource peerToHub 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2023-04-01' = if (deployVnetPeering == 'yes') {
+  name: 'vnet-${uniqueName}-To-usnc-vnet-core01'
+  parent: virtualNetwork
+  properties: {
+
+    allowVirtualNetworkAccess: true
+    allowForwardedTraffic: false
+    allowGatewayTransit: false
+    useRemoteGateways: true
+    remoteVirtualNetwork: {
+      id: remoteVirtualNetworkId
+    }
+
+  }
+}
+
+// deploy to different scope
+module peering 'vnetPeering.bicep' = if (deployVnetPeering == 'yes') {
+  name: 'deployVnetPeering'
+  scope: resourceGroup('11b1e7dd-d35d-435f-9c04-274e5e673671', 'usnc-core01')
+  params: {
+    uniqueName: uniqueName
+    spokeVnetId: virtualNetwork.id
+  }
+}
+
+// resource peerToAIvnet 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2023-04-01' = if (deployVnetPeering == 'yes') {
+//   name: 'usnc-vnet-core01-To-vnet-${uniqueName}'
+//   parent: coreVNET
+//   properties: {
+//     allowGatewayTransit: true
+//     allowVirtualNetworkAccess: true
+//     remoteVirtualNetwork: {
+//       id: virtualNetwork.id
+//     }
+//   }
+// }
 
 output webappUrl string = staticWebApp.properties.defaultHostname
 output webappName string = staticWebApp.name

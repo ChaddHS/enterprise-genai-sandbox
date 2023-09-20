@@ -9,7 +9,7 @@ resource core 'Microsoft.Network/virtualNetworks@2021-05-01' existing = {
 
 param uniqueName string = ''
 param spokeVnetId string = ''
-
+param out string = ''
 resource peerToAIvnet 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2023-04-01' = {
   name: 'usnc-vnet-core01-To-vnet-${uniqueName}'
   parent: core

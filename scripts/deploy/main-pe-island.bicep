@@ -602,18 +602,13 @@ resource openaiPrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-04-01' =
   }
 }
 
-param deployPrivateZones string = 'no'
-param deployPrivateZoneArecord string = 'no'
-
-param deployPrivateZoneArecordExistingZone string = 'yes'
-
-resource openaiDNSZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if ((deployment == 'private') && (deployPrivateZones == 'yes')) {
+resource openaiDNSZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if (deployment == 'private') {
   name: 'privatelink.openai.azure.com'
   location: 'global'
   tags: tags
 }
 
-resource openaiDNSZoneVirtualNetworkLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = if ((deployment == 'private') && (deployPrivateZones == 'yes')) {
+resource openaiDNSZoneVirtualNetworkLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = if (deployment == 'private') {
   parent: openaiDNSZone
   name: 'openai-${uniqueName}-vnl'
   location: 'global'
@@ -626,7 +621,7 @@ resource openaiDNSZoneVirtualNetworkLink 'Microsoft.Network/privateDnsZones/virt
   }
 }
 
-resource openaiSymbolicname 'Microsoft.Network/privateDnsZones/A@2020-06-01' = if ((deployment == 'private') && (deployPrivateZones == 'yes')) {
+resource openaiSymbolicname 'Microsoft.Network/privateDnsZones/A@2020-06-01' = if (deployment == 'private') {
   name: openAI.name
   parent: openaiDNSZone
 
@@ -643,7 +638,7 @@ resource openaiSymbolicname 'Microsoft.Network/privateDnsZones/A@2020-06-01' = i
   dependsOn: []
 }
 
-resource openaiSymbolicname2 'Microsoft.Network/privateDnsZones/A@2020-06-01' = if ((deployment == 'private') && (deployPrivateZones == 'yes')) {
+resource openaiSymbolicname2 'Microsoft.Network/privateDnsZones/A@2020-06-01' = if (deployment == 'private') {
   name: toLower(uniqueName)
   parent: openaiDNSZone
 
@@ -780,13 +775,13 @@ resource appPrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-04-01' = if
   }
 }
 
-resource sitesDNSZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if ((deployment == 'private') && (deployPrivateZones == 'yes')) {
+resource sitesDNSZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if (deployment == 'private') {
   name: 'privatelink.azurewebsites.net'
   location: 'global'
   tags: tags
 }
 
-resource appVirtualNetworkLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = if ((deployment == 'private') && (deployPrivateZones == 'yes')) {
+resource appVirtualNetworkLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = if (deployment == 'private') {
   parent: sitesDNSZone
   name: 'app-${uniqueName}-vnl'
   location: 'global'
@@ -799,7 +794,7 @@ resource appVirtualNetworkLink 'Microsoft.Network/privateDnsZones/virtualNetwork
   }
 }
 
-resource sitesSymbolicname 'Microsoft.Network/privateDnsZones/A@2020-06-01' = if ((deployment == 'private') && (deployPrivateZones == 'yes')) {
+resource sitesSymbolicname 'Microsoft.Network/privateDnsZones/A@2020-06-01' = if (deployment == 'private') {
   name: appServiceWeb.name
   parent: sitesDNSZone
 
@@ -838,13 +833,13 @@ resource sitesSymbolicname 'Microsoft.Network/privateDnsZones/A@2020-06-01' = if
 //   }
 // }
 
-resource sitesDNSZonescm 'Microsoft.Network/privateDnsZones@2020-06-01' = if ((deployment == 'private') && (deployPrivateZones == 'yes')) {
+resource sitesDNSZonescm 'Microsoft.Network/privateDnsZones@2020-06-01' = if (deployment == 'private') {
   name: 'scm.privatelink.azurewebsites.net'
   location: 'global'
   tags: tags
 }
 
-resource appVirtualNetworkLinkscm 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = if ((deployment == 'private') && (deployPrivateZones == 'yes')) {
+resource appVirtualNetworkLinkscm 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = if (deployment == 'private') {
   parent: sitesDNSZonescm
   name: 'app-${uniqueName}-scm-vnl'
   location: 'global'
@@ -857,7 +852,7 @@ resource appVirtualNetworkLinkscm 'Microsoft.Network/privateDnsZones/virtualNetw
   }
 }
 
-resource sitesSymbolicnamescm 'Microsoft.Network/privateDnsZones/A@2020-06-01' = if ((deployment == 'private') && (deployPrivateZones == 'yes')) {
+resource sitesSymbolicnamescm 'Microsoft.Network/privateDnsZones/A@2020-06-01' = if (deployment == 'private') {
   name: appServiceWeb.name
   parent: sitesDNSZonescm
 
@@ -1329,13 +1324,13 @@ resource staPrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-04-01' = if
   }
 }
 
-resource staDNSZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if ((deployment == 'private') && (deployPrivateZones == 'yes')) {
+resource staDNSZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if (deployment == 'private') {
   name: 'privatelink.blob.core.windows.net'
   location: 'global'
   tags: tags
 }
 
-resource staVirtualNetworkLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = if ((deployment == 'private') && (deployPrivateZones == 'yes')) {
+resource staVirtualNetworkLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = if (deployment == 'private') {
   parent: staDNSZone
   name: 'sta-${uniqueName}-vnl'
   location: 'global'
@@ -1349,7 +1344,7 @@ resource staVirtualNetworkLink 'Microsoft.Network/privateDnsZones/virtualNetwork
   }
 }
 
-resource staSymbolicname 'Microsoft.Network/privateDnsZones/A@2020-06-01' = if ((deployment == 'private') && (deployPrivateZones == 'yes')) {
+resource staSymbolicname 'Microsoft.Network/privateDnsZones/A@2020-06-01' = if (deployment == 'private') {
   name: storageaccount.name
   parent: staDNSZone
 
@@ -1458,13 +1453,13 @@ resource acsPrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-04-01' = if
   }
 }
 
-resource acsDNSZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if ((deployment == 'private') && (deployPrivateZones == 'yes')) {
+resource acsDNSZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if (deployment == 'private') {
   name: 'privatelink.search.windows.net'
   location: 'global'
   tags: tags
 }
 
-resource acsVirtualNetworkLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = if ((deployment == 'private') && (deployPrivateZones == 'yes')) {
+resource acsVirtualNetworkLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = if (deployment == 'private') {
   parent: acsDNSZone
   name: 'acs-${uniqueName}-vnl'
   location: 'global'
@@ -1478,7 +1473,7 @@ resource acsVirtualNetworkLink 'Microsoft.Network/privateDnsZones/virtualNetwork
   }
 }
 
-resource acsSymbolicname 'Microsoft.Network/privateDnsZones/A@2020-06-01' = if ((deployment == 'private') && (deployPrivateZones == 'yes')) {
+resource acsSymbolicname 'Microsoft.Network/privateDnsZones/A@2020-06-01' = if (deployment == 'private') {
   name: azureCognitiveSearch.name
   parent: acsDNSZone
 
@@ -1860,13 +1855,13 @@ resource cosmosPrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-04-01' =
   }
 }
 
-resource cosmosDNSZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if ((deployment == 'private') && (deployPrivateZones == 'yes')) {
+resource cosmosDNSZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if (deployment == 'private') {
   name: 'privatelink.documents.azure.com'
   location: 'global'
   tags: tags
 }
 
-resource cosmosVirtualNetworkLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = if ((deployment == 'private') && (deployPrivateZones == 'yes')) {
+resource cosmosVirtualNetworkLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = if (deployment == 'private') {
   parent: cosmosDNSZone
   name: 'cosmos-${uniqueName}-vnl'
   location: 'global'
@@ -1880,7 +1875,7 @@ resource cosmosVirtualNetworkLink 'Microsoft.Network/privateDnsZones/virtualNetw
   }
 }
 
-resource cosmosSymbolicname 'Microsoft.Network/privateDnsZones/A@2020-06-01' = if ((deployment == 'private') && (deployPrivateZones == 'yes')) {
+resource cosmosSymbolicname 'Microsoft.Network/privateDnsZones/A@2020-06-01' = if (deployment == 'private') {
   name: cosmosAccount.name
   parent: cosmosDNSZone
 
@@ -2037,13 +2032,13 @@ resource swaPrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-04-01' = if
   }
 }
 
-resource staticWebAppDNSZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if ((deployment == 'private') && (deployPrivateZones == 'yes')) {
+resource staticWebAppDNSZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if (deployment == 'private') {
   name: 'privatelink.3.azurestaticapps.net'
   location: 'global'
   tags: tags
 }
 
-resource staticWebAppVirtualNetworkLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = if ((deployment == 'private') && (deployPrivateZones == 'yes')) {
+resource staticWebAppVirtualNetworkLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = if (deployment == 'private') {
   parent: staticWebAppDNSZone
   name: 'swa-${uniqueName}-vnl'
   location: 'global'
@@ -2058,7 +2053,7 @@ resource staticWebAppVirtualNetworkLink 'Microsoft.Network/privateDnsZones/virtu
 
 //var swaHostname = split(staticWebApp.properties.defaultHostname, '.')[0]
 
-resource swaSymbolicname 'Microsoft.Network/privateDnsZones/A@2020-06-01' = if ((deployment == 'private') && (deployPrivateZones == 'yes')) {
+resource swaSymbolicname 'Microsoft.Network/privateDnsZones/A@2020-06-01' = if (deployment == 'private') {
   name: staticWebApp.name
   //name: swaHostname
   //name: staticWebApp
@@ -2085,7 +2080,7 @@ resource swaSymbolicname 'Microsoft.Network/privateDnsZones/A@2020-06-01' = if (
 @description('Deploy Public Ip on bastion vm')
 param deployVmPublicIp string = 'no'
 
-resource publicIp 'Microsoft.Network/publicIPAddresses@2022-05-01' = if (deployVmPublicIp == 'yes') {
+resource publicIp 'Microsoft.Network/publicIPAddresses@2022-05-01' = if (deployVmPublicIp == 'private') {
   name: publicIpName
   location: location
   sku: {
@@ -2209,7 +2204,7 @@ resource apiManagementService 'Microsoft.ApiManagement/service@2021-08-01' = {
   }
 }
 
-resource apimPrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-04-01' = if ((deployAPIm == 'yes') && (deployment == 'private')) {
+resource apimPrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-04-01' = if (deployAPIm == 'yes') {
   name: 'apim-${uniqueName}-pe'
   location: location
   tags: tags
@@ -2231,13 +2226,13 @@ resource apimPrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-04-01' = i
   }
 }
 
-resource apimDNSZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if ((deployAPIm == 'yes') && (deployPrivateZones == 'yes')) {
+resource apimDNSZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if (deployPrivateAPIm == 'yes') {
   name: 'privatelink.azure-api.net'
   location: 'global'
   tags: tags
 }
 
-resource apimVirtualNetworkLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = if ((deployAPIm == 'yes') && (deployPrivateZones == 'yes')) {
+resource apimVirtualNetworkLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = if (deployPrivateAPIm == 'yes') {
   parent: apimDNSZone
   name: 'apim-${uniqueName}-vnl'
   location: 'global'
@@ -2252,7 +2247,7 @@ resource apimVirtualNetworkLink 'Microsoft.Network/privateDnsZones/virtualNetwor
 
 //var swaHostname = split(staticWebApp.properties.defaultHostname, '.')[0]
 
-resource apimSymbolicname 'Microsoft.Network/privateDnsZones/A@2020-06-01' = if ((deployAPIm == 'yes') && (deployPrivateZones == 'yes')) {
+resource apimSymbolicname 'Microsoft.Network/privateDnsZones/A@2020-06-01' = if (deployPrivateAPIm == 'yes') {
   name: apiManagementService.name
   //name: swaHostname
   //name: staticWebApp
@@ -2314,72 +2309,17 @@ module peering 'vnetPeering.bicep' = {
   }
 }
 
-param deployPrivateZoneArecords string = 'yes'
-
-var azureStaticAppsArecord = {
-  name: split(staticWebApp.properties.defaultHostname, '.')[0]
-  //name: staticWebApp.name
-  ip: swaPrivateEndpoint.properties.customDnsConfigs[0].ipAddresses[0]
-}
-var azureAPIMArecord = {
-  name: apiManagementService.name
-  ip: apimPrivateEndpoint.properties.customDnsConfigs[0].ipAddresses[0]
-}
-var azureWebsitesArecord = {
-  name: appServiceWeb.name
-  ip: appPrivateEndpoint.properties.customDnsConfigs[0].ipAddresses[0]
-}
-var azureBlobArecord = {
-  name: storageaccount.name
-  ip: staPrivateEndpoint.properties.customDnsConfigs[0].ipAddresses[0]
-}
-var azureOpenAiArecord = {
-  name: toLower(uniqueName)
-  ip: openaiPrivateEndpoint.properties.customDnsConfigs[0].ipAddresses[0]
-}
-var azureWebsitesScmArecord = {
-  name: appServiceWeb.name
-  ip: appPrivateEndpoint.properties.customDnsConfigs[0].ipAddresses[0]
-}
-
-var cosmosAccountArecord = {
-  name: cosmosAccount.name
-  ip: cosmosPrivateEndpoint.properties.customDnsConfigs[0].ipAddresses[0]
-}
-
-var azureCognitiveSearchArecord = {
-  name: azureCognitiveSearch.name
-  ip: acsPrivateEndpoint.properties.customDnsConfigs[0].ipAddresses[0]
-}
-
-var nothing = {
-  name: ''
-  ip: ''
-}
-
-// Create A records in existing Private Zones
-
-module privateZoneArecords 'privatezones-s01core.bicep' = {
-  name: 'deployPrivateZoneARecords'
-  scope: resourceGroup('11b1e7dd-d35d-435f-9c04-274e5e673671', 'usnc-rg-privatedns-core01')
-  params: {
-    azureStaticAppsArecord: contains(deployPrivateZoneArecords, 'yes') ? azureStaticAppsArecord : nothing
-    azureAPIMArecord: contains(deployPrivateZoneArecords, 'yes') ? azureAPIMArecord : nothing
-    azureWebsitesArecord: contains(deployPrivateZoneArecords, 'yes') ? azureWebsitesArecord : nothing
-    azureBlobArecord: contains(deployPrivateZoneArecords, 'yes') ? azureBlobArecord : nothing
-    azureOpenAiArecord: contains(deployPrivateZoneArecords, 'yes') ? azureOpenAiArecord : nothing
-    azureWebsitesScmArecord: contains(deployPrivateZoneArecords, 'yes') ? azureWebsitesScmArecord : nothing
-    azureCognitiveSearchArecord: contains(deployPrivateZoneArecords, 'yes') ? azureCognitiveSearchArecord : nothing
-  }
-}
-
-module privateZoneArecordsS02 'privatezones-S02.bicep' = {
-  name: 'deployPrivateZoneARecords-S02'
-  scope: resourceGroup('8701016c-7d8e-4940-993c-fda1a8417f46', 'usnc-rg-s02-vnet-prd2')
-  params: {
-    cosmosAccountArecord: contains(deployPrivateZoneArecords, 'yes') ? cosmosAccountArecord : nothing
-  }
-}
+// resource peerToAIvnet 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2023-04-01' = if (deployVnetPeering == 'yes') {
+//   name: 'usnc-vnet-core01-To-vnet-${uniqueName}'
+//   parent: coreVNET
+//   properties: {
+//     allowGatewayTransit: true
+//     allowVirtualNetworkAccess: true
+//     remoteVirtualNetwork: {
+//       id: virtualNetwork.id
+//     }
+//   }
+// }
 
 output webappUrl string = staticWebApp.properties.defaultHostname
 output webappName string = staticWebApp.name

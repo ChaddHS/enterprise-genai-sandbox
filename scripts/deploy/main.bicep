@@ -5,20 +5,39 @@ Licensed under the MIT license. See LICENSE file in the project root for full li
 Bicep template for deploying CopilotChat Azure resources.
 */
 
+@description('Manditory Tags')
+param tags object = {
+  APPLICATION: 'Enterprise-GenAI'
+  ENVIRONMENT: 'sbx'
+  BUSINESS_UNIT: 'KNA'
+  OPERATING_HOURS: '24x7'
+  NAME: 'Enterprise-GenAI'
+  DEPARTMENT: ''
+  OWNER: 'brandon.vreuls@kaplan.edu'
+  BUSINESS_TIER: 'Low'
+  DATA_CLASSIFICATION: ''
+  BACKUP: 'False'
+  REQUESTER: 'joseph.susai@kaplan.edu'
+  COST_CENTER: '302_130077 - Artificial Intelligence Projects'
+  GIT_REPO: 'https://github.com/kss-github/enterprise-genai-sandbox.git'
+}
+
+param staticWebAppSku object = {
+  name: 'Standard'
+  tier: 'Standard'
+
+}
+
 @description('Name for the deployment consisting of alphanumeric characters or dashes (\'-\')')
 param name string = 'copichat'
 
 @description('SKU for the Azure App Service plan')
-@allowed([ 'B1', 'B3', 'S1', 'S2', 'S3', 'P1V3', 'P2V3', 'I1V2', 'I2V2' ])
+@allowed([ 'B1', 'S1', 'S2', 'S3', 'P1V3', 'P2V3', 'I1V2', 'I2V2' ])
 param webAppServiceSku string = 'S3'
 
 @description('Location of package to deploy as the web service')
 #disable-next-line no-hardcoded-env-urls
 param packageUri string = 'https://aka.ms/copilotchat/webapi/latest'
-
-@allowed([ 'private', 'public' ])
-@description('Deploy solution as private endpoints')
-param deployment string = 'private'
 
 @description('Underlying AI service')
 @allowed([
@@ -27,23 +46,14 @@ param deployment string = 'private'
 ])
 param aiService string = 'AzureOpenAI'
 
-@description('Private acs')
-param privAcsName string = 'acs'
-
 @description('Model to use for chat completions')
 param completionModel string = 'gpt-35-turbo'
-
-@description('Model version')
-param modelVersion string = '0301'
 
 @description('Model to use for text embeddings')
 param embeddingModel string = 'text-embedding-ada-002'
 
 @description('Completion model the task planner should use')
 param plannerModel string = 'gpt-35-turbo'
-
-//@description('Completion model the task planner should use')
-//param plannerModel_version string = '0301'
 
 @description('Azure OpenAI endpoint to use (Azure OpenAI only)')
 param aiEndpoint string = ''
@@ -105,37 +115,6 @@ param location string = 'eastus'
 ])
 param webappLocation string = 'westus2'
 
-param vnetCIDR string = '172.22.26.0/24'
-
-// '172.22.26.0/24'
-
-// @description('web subnet')
-// param subnet1 object = {
-//   name: 'webSubnet'
-//   subnet: '172.22.26.0/26'
-// }
-// @description('qdrant subnet')
-// param subnet2 object = {
-//   name: 'qdrantSubnet'
-//   subnet: '172.22.26.64/26'
-// }
-
-// @description('postgres subnet')
-// param subnet3 object = {
-//   name: 'postgresSubnet'
-//   subnet: '172.22.26.128/27'
-// }
-// @description('privatelinksubnet')
-// param subnet4 object = {
-//   name: 'websubnet'
-//   subnet: '172.22.26.160/27'
-// }
-// @description('bastion')
-// param subnet5 object = {
-//   name: 'bastionSubnet'
-//   subnet: '172.22.26.224/29'
-// }
-
 @description('Hash of the resource group ID')
 var rgIdHash = uniqueString(resourceGroup().id)
 
@@ -148,39 +127,6 @@ var storageFileShareName = 'aciqdrantshare'
 @description('PostgreSQL admin password')
 @secure()
 param sqlAdminPassword string = newGuid()
-
-@description('Manditory Tags')
-param tags object = {
-  APPLICATION: 'Enterprise-GenAI'
-  ENVIRONMENT: 'sbx'
-  BUSINESS_UNIT: ''
-  OPERATING_HOURS: ''
-  NAME: 'Enterprise-GenAI'
-  DEPARTMENT: ''
-  OWNER: ''
-  BUSINESS_TIER: 'Low'
-  DATA_CLASSIFICATION: ''
-  BACKUP: 'False'
-  REQUESTER: ''
-  GIT_REPO: ''
-}
-
-@description('Static Web App Tier')
-@allowed([ {
-    name: 'Standard'
-    tier: 'Standard'
-  }
-  {
-    name: 'Free'
-    tier: 'Free'
-  }
-
-])
-param staticWebAppTier object = {
-  name: 'Standard'
-  tier: 'Standard'
-
-}
 
 @description('Kaplan\'s PAT addresses')
 param kaplanIps array = [
@@ -414,10 +360,7 @@ param kaplanIps array = [
 //
 //
 @description('deploy API Management')
-param deployAPIm string = 'yes'
-
-@description('deploy API Management private or public')
-param deployPrivateAPIm string = 'yes'
+param deployAPIm bool = true
 
 @description('The name of the API Management service instance')
 param apiManagementServiceName string = 'apiservice${uniqueString(resourceGroup().id)}'
@@ -445,290 +388,49 @@ param sku string = 'Developer'
 ])
 param skuCount int = 1
 
-// @description('Location for all resources.')
-// param location string = resourceGroup().location
-
-// VM configuration
-//
-//
-//
-
-@description('Username for the Virtual Machine.')
-param adminUsername string = 'kapadmin'
-
-@description('Password for the Virtual Machine.')
-@minLength(12)
-@secure()
-param adminPassword string
-
-@description('Unique DNS Name for the Public IP used to access the Virtual Machine.')
-param dnsLabelPrefix string = toLower('${vmName}-${uniqueString(resourceGroup().id, vmName)}')
-
-@description('Name for the Public IP used to access the Virtual Machine.')
-param publicIpName string = 'myPublicIP'
-
-@description('Allocation method for the Public IP used to access the Virtual Machine.')
-@allowed([
-  'Dynamic'
-  'Static'
-])
-param publicIPAllocationMethod string = 'Dynamic'
-
-@description('SKU for the Public IP used to access the Virtual Machine.')
-@allowed([
-  'Basic'
-  'Standard'
-])
-param publicIpSku string = 'Basic'
-
-@description('The Windows version for the VM. This will pick a fully patched image of this given Windows version.')
-@allowed([
-  '2016-datacenter-gensecond'
-  '2016-datacenter-server-core-g2'
-  '2016-datacenter-server-core-smalldisk-g2'
-  '2016-datacenter-smalldisk-g2'
-  '2016-datacenter-with-containers-g2'
-  '2016-datacenter-zhcn-g2'
-  '2019-datacenter-core-g2'
-  '2019-datacenter-core-smalldisk-g2'
-  '2019-datacenter-core-with-containers-g2'
-  '2019-datacenter-core-with-containers-smalldisk-g2'
-  '2019-datacenter-gensecond'
-  '2019-datacenter-smalldisk-g2'
-  '2019-datacenter-with-containers-g2'
-  '2019-datacenter-with-containers-smalldisk-g2'
-  '2019-datacenter-zhcn-g2'
-  '2022-datacenter-azure-edition'
-  '2022-datacenter-azure-edition-core'
-  '2022-datacenter-azure-edition-core-smalldisk'
-  '2022-datacenter-azure-edition-smalldisk'
-  '2022-datacenter-core-g2'
-  '2022-datacenter-core-smalldisk-g2'
-  '2022-datacenter-g2'
-  '2022-datacenter-smalldisk-g2'
-])
-param OSVersion string = '2022-datacenter-azure-edition'
-
-@description('Size of the virtual machine.')
-
-// vmsize Standard_D2ds_v4 is required if you deploy bastion host and intend to run nested vm (for example wsl2)
-param vmSize string = 'Standard_D2ds_v4'
-
-// @description('Location for all resources.')
-// param location string = resourceGroup().location
-
-@description('Name of the virtual machine.')
-param vmName string = 'simple-vm'
-
-// @description('Security Type of the Virtual Machine.')
-// @allowed([
-//   'Standard'
-//   'TrustedLaunch'
-// ])
-// param securityType string = 'Standard'
-
-//var storageAccountName = 'bootdiags${uniqueString(resourceGroup().id)}'
-var nicName = 'myVMNic'
-// var addressPrefix = '10.0.0.0/16'
-// var subnetName = 'Subnet'
-// var subnetPrefix = '10.0.0.0/24'
-// var virtualNetworkName = 'MyVNET'
-var networkSecurityGroupName = 'default-NSG'
-
-//var subdomain1 = 'privatelink'
-var subdomain = contains(deployment, '.private') ? 'privatelink' : ''
-// var securityProfileJson = {
-//   uefiSettings: {
-//     secureBootEnabled: true
-//     vTpmEnabled: true
-//   }
-//   securityType: securityType
-// }
-// var extensionName = 'GuestAttestation'
-// var extensionPublisher = 'Microsoft.Azure.Security.WindowsAttestation'
-// var extensionVersion = '1.0'
-// var maaTenantName = 'GuestAttestation'
-// var maaEndpoint = substring('emptyString', 0, 0)
-
-// open ai config
-@description('enable custom dns servers on vnet')
-param customdns bool = true
-
-var dns = customdns ? [ '172.22.2.8', '172.22.2.9' ] : []
-
-//@description('Custom dns for vnet')
-//param customdns array = [ '172.22.2.8', '172.22.2.9' ]
-
 resource openAI 'Microsoft.CognitiveServices/accounts@2022-12-01' = if (deployNewAzureOpenAI) {
   name: 'ai-${uniqueName}'
   location: location
   kind: 'OpenAI'
+  tags: tags
   sku: {
     name: 'S0'
   }
-
-  tags: tags
   properties: {
     customSubDomainName: toLower(uniqueName)
-    publicNetworkAccess: contains(deployment, 'private') ? 'Disabled' : 'Enabled'
-    //publicNetworkAccess: 'Enabled'
+  }
+}
 
-    networkAcls: {
-      defaultAction: 'Allow'
+resource openAI_completionModel 'Microsoft.CognitiveServices/accounts/deployments@2022-12-01' = if (deployNewAzureOpenAI) {
+  parent: openAI
+  name: completionModel
+  properties: {
+    model: {
+      format: 'OpenAI'
+      name: completionModel
     }
-
-  }
-}
-
-resource openaiPrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-04-01' = if (deployment == 'private') {
-  name: 'openai-${uniqueName}-pe'
-  location: location
-  tags: tags
-  properties: {
-    subnet: {
-      id: virtualNetwork.properties.subnets[3].id
+    scaleSettings: {
+      scaleType: 'Standard'
     }
-    privateLinkServiceConnections: [
-      {
-        name: 'openai'
-        properties: {
-          privateLinkServiceId: openAI.id
-          groupIds: [
-            'account'
-          ]
-        }
-      }
-    ]
   }
 }
 
-param deployPrivateZones string = 'no'
-param deployPrivateZoneArecord string = 'no'
-
-param deployPrivateZoneArecordExistingZone string = 'yes'
-
-resource openaiDNSZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if ((deployment == 'private') && (deployPrivateZones == 'yes')) {
-  name: 'privatelink.openai.azure.com'
-  location: 'global'
-  tags: tags
-}
-
-resource openaiDNSZoneVirtualNetworkLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = if ((deployment == 'private') && (deployPrivateZones == 'yes')) {
-  parent: openaiDNSZone
-  name: 'openai-${uniqueName}-vnl'
-  location: 'global'
-  tags: tags
+resource openAI_embeddingModel 'Microsoft.CognitiveServices/accounts/deployments@2022-12-01' = if (deployNewAzureOpenAI) {
+  parent: openAI
+  name: embeddingModel
   properties: {
-    virtualNetwork: {
-      id: virtualNetwork.id
+    model: {
+      format: 'OpenAI'
+      name: embeddingModel
     }
-    registrationEnabled: false
+    scaleSettings: {
+      scaleType: 'Standard'
+    }
   }
+  dependsOn: [// This "dependency" is to create models sequentially because the resource
+    openAI_completionModel // provider does not support parallel creation of models properly.
+  ]
 }
-
-resource openaiSymbolicname 'Microsoft.Network/privateDnsZones/A@2020-06-01' = if ((deployment == 'private') && (deployPrivateZones == 'yes')) {
-  name: openAI.name
-  parent: openaiDNSZone
-
-  properties: {
-    ttl: 3600
-    aRecords: [
-      {
-        ipv4Address: openaiPrivateEndpoint.properties.customDnsConfigs[0].ipAddresses[0]
-      }
-    ]
-
-  }
-
-  dependsOn: []
-}
-
-resource openaiSymbolicname2 'Microsoft.Network/privateDnsZones/A@2020-06-01' = if ((deployment == 'private') && (deployPrivateZones == 'yes')) {
-  name: toLower(uniqueName)
-  parent: openaiDNSZone
-
-  properties: {
-    ttl: 3600
-    aRecords: [
-      {
-        ipv4Address: openaiPrivateEndpoint.properties.customDnsConfigs[0].ipAddresses[0]
-      }
-    ]
-
-  }
-
-  dependsOn: []
-}
-
-// resource openaiCognitiveservicesDNSZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if (deployment == 'private') {
-//   name: 'privatelink.cognitiveservices.azure.com'
-//   location: 'global'
-//   tags: tags
-// }
-
-// resource openaiCognitiveservicesDNSZoneVirtualNetworkLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = if (deployment == 'private') {
-//   parent: openaiCognitiveservicesDNSZone
-//   name: 'openai-cognitiveservices-${uniqueName}-vnl'
-//   location: 'global'
-//   tags: tags
-//   properties: {
-//     virtualNetwork: {
-//       id: virtualNetwork.id
-//     }
-//     registrationEnabled: false
-//   }
-// }
-
-// resource openAI_completionModel 'Microsoft.CognitiveServices/accounts/deployments@2022-12-01' = if (deployNewAzureOpenAI) {
-//   //resource openAI_completionModel 'Microsoft.CognitiveServices/accounts/deployments@2022-12-01' = if (deployNewAzureOpenAI) {
-//   parent: openAI
-//   name: completionModel
-
-//   properties: {
-
-//     model: {
-//       format: 'OpenAI'
-//       name: completionModel
-//       version: modelVersion
-//     }
-//     scaleSettings: {
-//       // capacity: 9
-//       scaleType: 'Standard'
-//     }
-//   }
-//   // sku: {
-//   //   name: 'S0'
-//   //   //capacity: 120
-//   //   tier: 'Standard'
-//   // }
-// }
-
-// resource openAI_embeddingModel 'Microsoft.CognitiveServices/accounts/deployments@2022-12-01' = if (deployNewAzureOpenAI) {
-//   //resource openAI_embeddingModel 'Microsoft.CognitiveServices/accounts/deployments@2022-12-01' = if (deployNewAzureOpenAI) {
-//   parent: openAI
-//   name: embeddingModel
-//   properties: {
-//     model: {
-//       format: 'OpenAI'
-//       name: embeddingModel
-//       // version: modelVersion
-//     }
-
-//     scaleSettings: {
-//       //capacity: 9
-//       scaleType: 'Standard'
-//     }
-//   }
-
-//   //   sku: {
-//   //     name: 'S0'
-//   //     capacity: 10
-//   //     tier: 'Standard'
-//   //   }
-//   dependsOn: [// This "dependency" is to create models sequentially because the resource
-//     openAI_completionModel // provider does not support parallel creation of models properly.
-//   ]
-// }
 
 resource appServicePlan 'Microsoft.Web/serverfarms@2022-03-01' = {
   name: 'asp-${uniqueName}-webapi'
@@ -747,7 +449,6 @@ resource appServiceWeb 'Microsoft.Web/sites@2022-09-01' = {
   tags: union(tags, {
       skweb: '1'
     })
-
   properties: {
     serverFarmId: appServicePlan.id
     httpsOnly: true
@@ -758,124 +459,7 @@ resource appServiceWeb 'Microsoft.Web/sites@2022-09-01' = {
   }
 }
 
-resource appPrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-04-01' = if (deployment == 'private') {
-  name: 'app-${uniqueName}-pe'
-  location: location
-  tags: tags
-  properties: {
-    subnet: {
-      id: virtualNetwork.properties.subnets[3].id
-    }
-    privateLinkServiceConnections: [
-      {
-        name: 'app'
-        properties: {
-          privateLinkServiceId: appServiceWeb.id
-          groupIds: [
-            'sites'
-          ]
-        }
-      }
-    ]
-  }
-}
-
-resource sitesDNSZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if ((deployment == 'private') && (deployPrivateZones == 'yes')) {
-  name: 'privatelink.azurewebsites.net'
-  location: 'global'
-  tags: tags
-}
-
-resource appVirtualNetworkLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = if ((deployment == 'private') && (deployPrivateZones == 'yes')) {
-  parent: sitesDNSZone
-  name: 'app-${uniqueName}-vnl'
-  location: 'global'
-  tags: tags
-  properties: {
-    virtualNetwork: {
-      id: virtualNetwork.id
-    }
-    registrationEnabled: false
-  }
-}
-
-resource sitesSymbolicname 'Microsoft.Network/privateDnsZones/A@2020-06-01' = if ((deployment == 'private') && (deployPrivateZones == 'yes')) {
-  name: appServiceWeb.name
-  parent: sitesDNSZone
-
-  properties: {
-    ttl: 3600
-    aRecords: [
-      {
-        ipv4Address: appPrivateEndpoint.properties.customDnsConfigs[0].ipAddresses[0]
-      }
-    ]
-
-  }
-
-  dependsOn: []
-}
-
-// resource appPrivateEndpointscm 'Microsoft.Network/privateEndpoints@2023-04-01' = if (deployment == 'private') {
-//   name: 'app-${uniqueName}-scm-pe'
-//   location: location
-//   tags: tags
-//   properties: {
-//     subnet: {
-//       id: virtualNetwork.properties.subnets[3].id
-//     }
-//     privateLinkServiceConnections: [
-//       {
-//         name: 'app'
-//         properties: {
-//           privateLinkServiceId: appServiceWeb.id
-//           groupIds: [
-//             'sites'
-//           ]
-//         }
-//       }
-//     ]
-//   }
-// }
-
-resource sitesDNSZonescm 'Microsoft.Network/privateDnsZones@2020-06-01' = if ((deployment == 'private') && (deployPrivateZones == 'yes')) {
-  name: 'scm.privatelink.azurewebsites.net'
-  location: 'global'
-  tags: tags
-}
-
-resource appVirtualNetworkLinkscm 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = if ((deployment == 'private') && (deployPrivateZones == 'yes')) {
-  parent: sitesDNSZonescm
-  name: 'app-${uniqueName}-scm-vnl'
-  location: 'global'
-  tags: tags
-  properties: {
-    virtualNetwork: {
-      id: virtualNetwork.id
-    }
-    registrationEnabled: false
-  }
-}
-
-resource sitesSymbolicnamescm 'Microsoft.Network/privateDnsZones/A@2020-06-01' = if ((deployment == 'private') && (deployPrivateZones == 'yes')) {
-  name: appServiceWeb.name
-  parent: sitesDNSZonescm
-
-  properties: {
-    ttl: 3600
-    aRecords: [
-      {
-        ipv4Address: appPrivateEndpoint.properties.customDnsConfigs[0].ipAddresses[0]
-      }
-    ]
-
-  }
-
-  dependsOn: []
-}
-
 resource appServiceWebConfig 'Microsoft.Web/sites/config@2022-09-01' = {
-  //resource appServiceWebConfig 'Microsoft.Web/sites/config@2022-09-01' = if (deployment == 'public') {
   parent: appServiceWeb
   name: 'web'
   properties: {
@@ -1046,177 +630,6 @@ resource appServiceWebConfig 'Microsoft.Web/sites/config@2022-09-01' = {
   }
 }
 
-// resource appServiceWebConfigprivate 'Microsoft.Web/sites/config@2022-09-01' = if (deployment == 'public') {
-//   parent: appServiceWeb
-//   name: 'web'
-//   properties: {
-//     alwaysOn: false
-//     cors: {
-//       allowedOrigins: [
-//         'http://localhost:3000'
-//         'https://localhost:3000'
-//       ]
-//       supportCredentials: true
-//     }
-//     detailedErrorLoggingEnabled: true
-//     minTlsVersion: '1.2'
-//     netFrameworkVersion: 'v6.0'
-//     use32BitWorkerProcess: false
-//     vnetRouteAllEnabled: true
-//     webSocketsEnabled: true
-//     appSettings: [
-//       {
-//         name: 'AIService:Type'
-//         value: aiService
-//       }
-//       {
-//         name: 'AIService:Endpoint'
-//         value: deployNewAzureOpenAI ? openAI.properties.endpoint : aiEndpoint
-//       }
-//       {
-//         name: 'AIService:Key'
-//         value: deployNewAzureOpenAI ? openAI.listKeys().key1 : aiApiKey
-//       }
-//       {
-//         name: 'AIService:Models:Completion'
-//         value: completionModel
-//       }
-//       {
-//         name: 'AIService:Models:Embedding'
-//         value: embeddingModel
-//       }
-//       {
-//         name: 'AIService:Models:Planner'
-//         value: plannerModel
-//       }
-//       {
-//         name: 'Authentication:Type'
-//         value: 'AzureAd'
-//       }
-//       {
-//         name: 'Authentication:AzureAd:Instance'
-//         value: azureAdInstance
-//       }
-//       {
-//         name: 'Authentication:AzureAd:TenantId'
-//         value: azureAdTenantId
-//       }
-//       {
-//         name: 'Authentication:AzureAd:ClientId'
-//         value: webApiClientId
-//       }
-//       {
-//         name: 'Authentication:AzureAd:Scopes'
-//         value: 'access_as_user'
-//       }
-//       {
-//         name: 'ChatStore:Type'
-//         value: deployCosmosDB ? 'cosmos' : 'volatile'
-//       }
-//       {
-//         name: 'ChatStore:Cosmos:Database'
-//         value: 'CopilotChat'
-//       }
-//       {
-//         name: 'ChatStore:Cosmos:ChatSessionsContainer'
-//         value: 'chatsessions'
-//       }
-//       {
-//         name: 'ChatStore:Cosmos:ChatMessagesContainer'
-//         value: 'chatmessages'
-//       }
-//       {
-//         name: 'ChatStore:Cosmos:ChatMemorySourcesContainer'
-//         value: 'chatmemorysources'
-//       }
-//       {
-//         name: 'ChatStore:Cosmos:ChatParticipantsContainer'
-//         value: 'chatparticipants'
-//       }
-//       {
-//         name: 'ChatStore:Cosmos:ConnectionString'
-//         value: deployCosmosDB ? cosmosAccount.listConnectionStrings().connectionStrings[0].connectionString : ''
-//       }
-//       {
-//         name: 'MemoryStore:Type'
-//         value: memoryStore
-//       }
-//       {
-//         name: 'MemoryStore:Qdrant:Host'
-//         value: memoryStore == 'Qdrant' ? 'https://${appServiceQdrant.properties.defaultHostName}' : ''
-//       }
-//       {
-//         name: 'MemoryStore:Qdrant:Port'
-//         value: '443'
-//       }
-//       {
-//         name: 'MemoryStore:AzureCognitiveSearch:UseVectorSearch'
-//         value: 'true'
-//       }
-//       {
-//         name: 'MemoryStore:AzureCognitiveSearch:Endpoint'
-//         value: memoryStore == 'AzureCognitiveSearch' ? 'https://${privAcsName}.search.windows.net' : ''
-//       }
-//       {
-//         name: 'MemoryStore:AzureCognitiveSearch:Key'
-//         value: memoryStore == 'AzureCognitiveSearch' ? azureCognitiveSearch.listAdminKeys().primaryKey : ''
-//       }
-//       {
-//         name: 'MemoryStore:Postgres:ConnectionString'
-//         value: memoryStore == 'Postgres' ? 'Host=${postgreServerGroup.properties.serverNames[0].fullyQualifiedDomainName}:5432;Username=citus;Password=${sqlAdminPassword};Database=citus' : ''
-//       }
-//       {
-//         name: 'AzureSpeech:Region'
-//         value: location
-//       }
-//       {
-//         name: 'AzureSpeech:Key'
-//         value: deploySpeechServices ? speechAccount.listKeys().key1 : ''
-//       }
-//       {
-//         name: 'AllowedOrigins'
-//         value: '[*]' // Defer list of allowed origins to the Azure service app's CORS configuration
-//       }
-//       {
-//         name: 'Kestrel:Endpoints:Https:Url'
-//         value: 'https://localhost:443'
-//       }
-//       {
-//         name: 'Logging:LogLevel:Default'
-//         value: 'Warning'
-//       }
-//       {
-//         name: 'Logging:LogLevel:CopilotChat.WebApi'
-//         value: 'Warning'
-//       }
-//       {
-//         name: 'Logging:LogLevel:Microsoft.SemanticKernel'
-//         value: 'Warning'
-//       }
-//       {
-//         name: 'Logging:LogLevel:Microsoft.AspNetCore.Hosting'
-//         value: 'Warning'
-//       }
-//       {
-//         name: 'Logging:LogLevel:Microsoft.Hosting.Lifetimel'
-//         value: 'Warning'
-//       }
-//       {
-//         name: 'ApplicationInsights:ConnectionString'
-//         value: appInsights.properties.ConnectionString
-//       }
-//       {
-//         name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
-//         value: appInsights.properties.ConnectionString
-//       }
-//       {
-//         name: 'ApplicationInsightsAgent_EXTENSION_VERSION'
-//         value: '~2'
-//       }
-//     ]
-//   }
-// }
-
 resource appServiceWebDeploy 'Microsoft.Web/sites/extensions@2022-09-01' = if (deployWebApiPackage) {
   name: 'MSDeploy'
   kind: 'string'
@@ -1287,90 +700,9 @@ resource storage 'Microsoft.Storage/storageAccounts@2022-09-01' = if (memoryStor
   }
 }
 
-resource storageaccount 'Microsoft.Storage/storageAccounts@2022-09-01' = if (deployment == 'private') {
-  name: 'sta${rgIdHash}' // Not using full unique name to avoid hitting 24 char limit
-  location: location
-  kind: 'StorageV2'
-  tags: tags
-  sku: {
-    name: 'Standard_LRS'
-  }
-  properties: {
-    supportsHttpsTrafficOnly: true
-    allowBlobPublicAccess: false
-  }
-  resource fileservices 'fileServices' = {
-    name: 'default'
-    resource share 'shares' = {
-      name: storageFileShareName
-    }
-  }
-}
-
-resource staPrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-04-01' = if (deployment == 'private') {
-  name: 'sta-${uniqueName}-pe'
-  location: location
-  tags: tags
-  properties: {
-    subnet: {
-      id: virtualNetwork.properties.subnets[3].id
-    }
-    privateLinkServiceConnections: [
-      {
-        name: 'sta'
-        properties: {
-          privateLinkServiceId: storageaccount.id
-          groupIds: [
-            'blob'
-          ]
-        }
-      }
-    ]
-  }
-}
-
-resource staDNSZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if ((deployment == 'private') && (deployPrivateZones == 'yes')) {
-  name: 'privatelink.blob.core.windows.net'
-  location: 'global'
-  tags: tags
-}
-
-resource staVirtualNetworkLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = if ((deployment == 'private') && (deployPrivateZones == 'yes')) {
-  parent: staDNSZone
-  name: 'sta-${uniqueName}-vnl'
-  location: 'global'
-  tags: tags
-  properties: {
-    virtualNetwork: {
-      id: virtualNetwork.id
-    }
-    registrationEnabled: false
-
-  }
-}
-
-resource staSymbolicname 'Microsoft.Network/privateDnsZones/A@2020-06-01' = if ((deployment == 'private') && (deployPrivateZones == 'yes')) {
-  name: storageaccount.name
-  parent: staDNSZone
-
-  properties: {
-    ttl: 3600
-
-    aRecords: [
-      {
-        ipv4Address: staPrivateEndpoint.properties.customDnsConfigs[0].ipAddresses[0]
-      }
-    ]
-
-  }
-
-  dependsOn: []
-}
-
 resource appServicePlanQdrant 'Microsoft.Web/serverfarms@2022-03-01' = if (memoryStore == 'Qdrant') {
   name: 'asp-${uniqueName}-qdrant'
   location: location
-  tags: tags
   kind: 'linux'
   sku: {
     name: 'P1v3'
@@ -1383,7 +715,6 @@ resource appServicePlanQdrant 'Microsoft.Web/serverfarms@2022-03-01' = if (memor
 resource appServiceQdrant 'Microsoft.Web/sites@2022-09-01' = if (memoryStore == 'Qdrant') {
   name: 'app-${uniqueName}-qdrant'
   location: location
-  tags: tags
   kind: 'app,linux,container'
   properties: {
     serverFarmId: appServicePlanQdrant.id
@@ -1426,7 +757,6 @@ resource appServiceQdrant 'Microsoft.Web/sites@2022-09-01' = if (memoryStore == 
 resource azureCognitiveSearch 'Microsoft.Search/searchServices@2022-09-01' = if (memoryStore == 'AzureCognitiveSearch') {
   name: 'acs-${uniqueName}'
   location: location
-  tags: tags
   sku: {
     name: 'basic'
   }
@@ -1436,85 +766,20 @@ resource azureCognitiveSearch 'Microsoft.Search/searchServices@2022-09-01' = if 
   }
 }
 
-resource acsPrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-04-01' = if (deployment == 'private') {
-  name: 'acs-${uniqueName}-pe'
-  location: location
-  tags: tags
-  properties: {
-    subnet: {
-      id: virtualNetwork.properties.subnets[3].id
-    }
-    privateLinkServiceConnections: [
-      {
-        name: 'acs'
-        properties: {
-          privateLinkServiceId: azureCognitiveSearch.id
-          groupIds: [
-            'searchService'
-          ]
-        }
-      }
-    ]
-  }
-}
-
-resource acsDNSZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if ((deployment == 'private') && (deployPrivateZones == 'yes')) {
-  name: 'privatelink.search.windows.net'
-  location: 'global'
-  tags: tags
-}
-
-resource acsVirtualNetworkLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = if ((deployment == 'private') && (deployPrivateZones == 'yes')) {
-  parent: acsDNSZone
-  name: 'acs-${uniqueName}-vnl'
-  location: 'global'
-  tags: tags
-  properties: {
-    virtualNetwork: {
-      id: virtualNetwork.id
-    }
-    registrationEnabled: false
-
-  }
-}
-
-resource acsSymbolicname 'Microsoft.Network/privateDnsZones/A@2020-06-01' = if ((deployment == 'private') && (deployPrivateZones == 'yes')) {
-  name: azureCognitiveSearch.name
-  parent: acsDNSZone
-
-  properties: {
-    ttl: 3600
-
-    aRecords: [
-      {
-        ipv4Address: acsPrivateEndpoint.properties.customDnsConfigs[0].ipAddresses[0]
-      }
-    ]
-
-  }
-
-  dependsOn: []
-}
-
 resource virtualNetwork 'Microsoft.Network/virtualNetworks@2021-05-01' = {
   name: 'vnet-${uniqueName}'
   location: location
-  tags: tags
   properties: {
-    dhcpOptions: {
-      dnsServers: dns
-    }
-
     addressSpace: {
       addressPrefixes: [
-        vnetCIDR
+        '10.0.0.0/16'
       ]
     }
     subnets: [
       {
         name: 'webSubnet'
         properties: {
-          addressPrefix: '172.22.26.0/26'
+          addressPrefix: '10.0.1.0/24'
           networkSecurityGroup: {
             id: webNsg.id
           }
@@ -1541,7 +806,7 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2021-05-01' = {
       {
         name: 'qdrantSubnet'
         properties: {
-          addressPrefix: '172.22.26.64/26'
+          addressPrefix: '10.0.2.0/24'
           networkSecurityGroup: {
             id: qdrantNsg.id
           }
@@ -1568,40 +833,12 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2021-05-01' = {
       {
         name: 'postgresSubnet'
         properties: {
-          addressPrefix: '172.22.26.128/27'
+          addressPrefix: '10.0.3.0/24'
           serviceEndpoints: []
           delegations: []
           privateEndpointNetworkPolicies: 'Disabled'
           privateLinkServiceNetworkPolicies: 'Enabled'
         }
-
-      }
-
-      {
-        name: 'privateEndpointSubnet'
-        properties: {
-          addressPrefix: '172.22.26.160/27'
-          serviceEndpoints: []
-          delegations: []
-          privateEndpointNetworkPolicies: 'Enabled'
-          privateLinkServiceNetworkPolicies: 'Disabled'
-        }
-
-      }
-
-      {
-        name: 'bastionSubnet'
-        properties: {
-          addressPrefix: '172.22.26.224/29'
-          networkSecurityGroup: {
-            id: bastionnsg.id
-          }
-          serviceEndpoints: []
-          delegations: []
-          privateEndpointNetworkPolicies: 'Enabled'
-          privateLinkServiceNetworkPolicies: 'Disabled'
-        }
-
       }
     ]
   }
@@ -1610,7 +847,6 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2021-05-01' = {
 resource webNsg 'Microsoft.Network/networkSecurityGroups@2022-11-01' = {
   name: 'nsg-${uniqueName}-webapi'
   location: location
-  tags: tags
   properties: {
     securityRules: [
       {
@@ -1630,33 +866,9 @@ resource webNsg 'Microsoft.Network/networkSecurityGroups@2022-11-01' = {
   }
 }
 
-resource bastionnsg 'Microsoft.Network/networkSecurityGroups@2022-11-01' = if (deployment == 'private') {
-  name: 'nsg-${uniqueName}-bastion'
-  location: location
-  tags: tags
-  properties: {
-    securityRules: [
-      {
-        name: 'AllowAnyHTTPSInbound'
-        properties: {
-          protocol: 'TCP'
-          sourcePortRange: '*'
-          destinationPortRange: '3389'
-          sourceAddressPrefixes: kaplanIps
-          destinationAddressPrefix: '*'
-          access: 'Allow'
-          priority: 100
-          direction: 'Inbound'
-        }
-      }
-    ]
-  }
-}
-
 resource qdrantNsg 'Microsoft.Network/networkSecurityGroups@2022-11-01' = {
   name: 'nsg-${uniqueName}-qdrant'
   location: location
-  tags: tags
   properties: {
     securityRules: []
   }
@@ -1665,7 +877,6 @@ resource qdrantNsg 'Microsoft.Network/networkSecurityGroups@2022-11-01' = {
 resource webSubnetConnection 'Microsoft.Web/sites/virtualNetworkConnections@2022-09-01' = {
   parent: appServiceWeb
   name: 'webSubnetConnection'
-
   properties: {
     vnetResourceId: virtualNetwork.properties.subnets[0].id
     isSwift: true
@@ -1675,7 +886,6 @@ resource webSubnetConnection 'Microsoft.Web/sites/virtualNetworkConnections@2022
 resource qdrantSubnetConnection 'Microsoft.Web/sites/virtualNetworkConnections@2022-09-01' = if (memoryStore == 'Qdrant') {
   parent: appServiceQdrant
   name: 'qdrantSubnetConnection'
-
   properties: {
     vnetResourceId: virtualNetwork.properties.subnets[1].id
     isSwift: true
@@ -1838,68 +1048,6 @@ resource memorySourcesContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDataba
   }
 }
 
-resource cosmosPrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-04-01' = if (deployment == 'private') {
-  name: 'cosmos-${uniqueName}-pe'
-  location: location
-  tags: tags
-  properties: {
-    subnet: {
-      id: virtualNetwork.properties.subnets[3].id
-    }
-    privateLinkServiceConnections: [
-      {
-        name: 'cosmos'
-        properties: {
-          privateLinkServiceId: cosmosAccount.id
-          groupIds: [
-            'Sql'
-          ]
-        }
-      }
-    ]
-  }
-}
-
-resource cosmosDNSZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if ((deployment == 'private') && (deployPrivateZones == 'yes')) {
-  name: 'privatelink.documents.azure.com'
-  location: 'global'
-  tags: tags
-}
-
-resource cosmosVirtualNetworkLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = if ((deployment == 'private') && (deployPrivateZones == 'yes')) {
-  parent: cosmosDNSZone
-  name: 'cosmos-${uniqueName}-vnl'
-  location: 'global'
-  tags: tags
-  properties: {
-    virtualNetwork: {
-      id: virtualNetwork.id
-    }
-    registrationEnabled: false
-
-  }
-}
-
-resource cosmosSymbolicname 'Microsoft.Network/privateDnsZones/A@2020-06-01' = if ((deployment == 'private') && (deployPrivateZones == 'yes')) {
-  name: cosmosAccount.name
-  parent: cosmosDNSZone
-
-  properties: {
-    ttl: 3600
-
-    aRecords: [
-      {
-        ipv4Address: cosmosPrivateEndpoint.properties.customDnsConfigs[0].ipAddresses[0]
-      }
-    ]
-
-  }
-
-  dependsOn: []
-}
-
-// Postgres persistent store
-
 resource postgreServerGroup 'Microsoft.DBforPostgreSQL/serverGroupsv2@2022-11-08' = if (memoryStore == 'Postgres') {
   name: 'pg-${uniqueName}'
   location: location
@@ -1921,13 +1069,11 @@ resource postgreServerGroup 'Microsoft.DBforPostgreSQL/serverGroupsv2@2022-11-08
 resource postgresDNSZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if (memoryStore == 'Postgres') {
   name: 'privatelink.postgres.cosmos.azure.com'
   location: 'global'
-  tags: tags
 }
 
 resource postgresPrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-04-01' = if (memoryStore == 'Postgres') {
   name: 'pg-${uniqueName}-pe'
   location: location
-  tags: tags
   properties: {
     subnet: {
       id: virtualNetwork.properties.subnets[2].id
@@ -1950,7 +1096,6 @@ resource postgresVirtualNetworkLink 'Microsoft.Network/privateDnsZones/virtualNe
   parent: postgresDNSZone
   name: 'pg-${uniqueName}-vnl'
   location: 'global'
-  tags: tags
   properties: {
     virtualNetwork: {
       id: virtualNetwork.id
@@ -1962,7 +1107,6 @@ resource postgresVirtualNetworkLink 'Microsoft.Network/privateDnsZones/virtualNe
 resource postgresPrivateDnsZoneGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2023-04-01' = if (memoryStore == 'Postgres') {
   #disable-next-line use-parent-property
   name: '${postgresPrivateEndpoint.name}/default'
-
   properties: {
     privateDnsZoneConfigs: [
       {
@@ -1978,7 +1122,6 @@ resource postgresPrivateDnsZoneGroup 'Microsoft.Network/privateEndpoints/private
 resource speechAccount 'Microsoft.CognitiveServices/accounts@2022-12-01' = if (deploySpeechServices) {
   name: 'cog-${uniqueName}'
   location: location
-  tags: tags
   sku: {
     name: 'S0'
   }
@@ -2001,204 +1144,29 @@ resource staticWebApp 'Microsoft.Web/staticSites@2022-09-01' = {
   tags: tags
   properties: {
     provider: 'None'
+    //enterpriseGradeCdnStatus: 'Enabled'
   }
   sku: {
-    name: staticWebAppTier.name
-    tier: staticWebAppTier.tier
-  }
-
-  //staticWebAppTier
-
-  //{
-  //  name: 'Free'
-  //  tier: 'Free'
-  // }
-}
-
-resource swaPrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-04-01' = if (deployment == 'private') {
-  name: 'swa-${uniqueName}-pe'
-  location: location
-  tags: tags
-  properties: {
-    subnet: {
-      id: virtualNetwork.properties.subnets[3].id
-    }
-    privateLinkServiceConnections: [
-      {
-        name: 'swa'
-        properties: {
-          privateLinkServiceId: staticWebApp.id
-          groupIds: [
-            'staticSites'
-          ]
-        }
-      }
-    ]
+    name: staticWebAppSku.name
+    tier: staticWebAppSku.tier
   }
 }
 
-resource staticWebAppDNSZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if ((deployment == 'private') && (deployPrivateZones == 'yes')) {
-  name: 'privatelink.3.azurestaticapps.net'
-  location: 'global'
-  tags: tags
-}
+// resource symbolicname 'Microsoft.Web/staticSites/customDomains@2022-09-01' = {
+//   name: 'chatkna.kaplan.com'
 
-resource staticWebAppVirtualNetworkLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = if ((deployment == 'private') && (deployPrivateZones == 'yes')) {
-  parent: staticWebAppDNSZone
-  name: 'swa-${uniqueName}-vnl'
-  location: 'global'
-  tags: tags
-  properties: {
-    virtualNetwork: {
-      id: virtualNetwork.id
-    }
-    registrationEnabled: false
-  }
-}
-
-//var swaHostname = split(staticWebApp.properties.defaultHostname, '.')[0]
-
-resource swaSymbolicname 'Microsoft.Network/privateDnsZones/A@2020-06-01' = if ((deployment == 'private') && (deployPrivateZones == 'yes')) {
-  name: staticWebApp.name
-  //name: swaHostname
-  //name: staticWebApp
-  parent: staticWebAppDNSZone
-
-  properties: {
-    ttl: 3600
-
-    aRecords: [
-      {
-        //  ipv4Address: '192.168.1.1'
-
-        ipv4Address: swaPrivateEndpoint.properties.customDnsConfigs[0].ipAddresses[0]
-      }
-    ]
-
-  }
-
-  dependsOn: []
-}
-
-// Deploy VM
-
-@description('Deploy Public Ip on bastion vm')
-param deployVmPublicIp string = 'no'
-
-resource publicIp 'Microsoft.Network/publicIPAddresses@2022-05-01' = if (deployVmPublicIp == 'yes') {
-  name: publicIpName
-  location: location
-  sku: {
-    name: publicIpSku
-  }
-  properties: {
-    publicIPAllocationMethod: publicIPAllocationMethod
-    dnsSettings: {
-      domainNameLabel: dnsLabelPrefix
-    }
-  }
-}
-
-resource networkSecurityGroup 'Microsoft.Network/networkSecurityGroups@2022-05-01' = if (deployment == 'private') {
-  name: networkSecurityGroupName
-  location: location
-  properties: {
-    securityRules: [
-      {
-        name: 'default-allow-3389'
-        properties: {
-          priority: 1000
-          access: 'Allow'
-          direction: 'Inbound'
-          destinationPortRange: '3389'
-          protocol: 'Tcp'
-          sourcePortRange: '*'
-          sourceAddressPrefix: '*'
-          destinationAddressPrefix: '*'
-        }
-      }
-    ]
-  }
-}
-
-resource nic 'Microsoft.Network/networkInterfaces@2022-05-01' = if (deployment == 'private') {
-  name: nicName
-  location: location
-  properties: {
-    ipConfigurations: [
-      {
-        name: 'ipconfig1'
-        properties: {
-          privateIPAllocationMethod: 'Dynamic'
-          // publicIPAddress: {
-          //   id: contains(deployVmPublicIp, 'yes') ? publicIp.id : ''
-          // }
-          subnet: {
-            id: virtualNetwork.properties.subnets[4].id
-            //id: resourceId('Microsoft.Network/virtualNetworks/subnets', virtualNetwork.id, virtualNetwork.properties.subnets[4].id)
-          }
-        }
-      }
-    ]
-  }
-  dependsOn: []
-}
-
-resource vm 'Microsoft.Compute/virtualMachines@2022-03-01' = if (deployment == 'private') {
-  name: vmName
-  location: location
-  properties: {
-    hardwareProfile: {
-      vmSize: vmSize
-    }
-    osProfile: {
-      computerName: vmName
-      adminUsername: adminUsername
-      adminPassword: adminPassword
-    }
-    storageProfile: {
-      imageReference: {
-        publisher: 'MicrosoftWindowsServer'
-        offer: 'WindowsServer'
-        sku: OSVersion
-        version: 'latest'
-      }
-      osDisk: {
-        createOption: 'FromImage'
-        managedDisk: {
-          storageAccountType: 'StandardSSD_LRS'
-        }
-      }
-      dataDisks: [
-        {
-          diskSizeGB: 1023
-          lun: 0
-          createOption: 'Empty'
-        }
-      ]
-    }
-    networkProfile: {
-      networkInterfaces: [
-        {
-          id: nic.id
-        }
-      ]
-    }
-    // diagnosticsProfile: {
-    //   bootDiagnostics: {
-    //     enabled: true
-    //     storageUri: storageAccount.properties.primaryEndpoints.blob
-    //   }
-    // }
-    //securityProfile: ((securityType == 'TrustedLaunch') ? securityProfileJson : null)
-  }
-}
+//   parent: staticWebApp
+//   // properties: {
+//   //   validationMethod: 'string'
+//   // }
+// }
 
 // Deploy Azure API Management
 
-resource apiManagementService 'Microsoft.ApiManagement/service@2021-08-01' = {
+resource apiManagementService 'Microsoft.ApiManagement/service@2021-08-01' = if (deployAPIm) {
   name: apiManagementServiceName
   location: location
+  tags: tags
   sku: {
     name: sku
     capacity: skuCount
@@ -2209,175 +1177,23 @@ resource apiManagementService 'Microsoft.ApiManagement/service@2021-08-01' = {
   }
 }
 
-resource apimPrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-04-01' = if ((deployAPIm == 'yes') && (deployment == 'private')) {
-  name: 'apim-${uniqueName}-pe'
+resource storageaccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
+  name: 'storage${rgIdHash}' // Not using full unique name to avoid hitting 24 char limit
   location: location
+  kind: 'StorageV2'
   tags: tags
+  sku: {
+    name: 'Standard_LRS'
+  }
   properties: {
-    subnet: {
-      id: virtualNetwork.properties.subnets[3].id
+    supportsHttpsTrafficOnly: true
+    allowBlobPublicAccess: false
+  }
+  resource fileservices 'fileServices' = {
+    name: 'default'
+    resource share 'shares' = {
+      name: storageFileShareName
     }
-    privateLinkServiceConnections: [
-      {
-        name: 'apim'
-        properties: {
-          privateLinkServiceId: apiManagementService.id
-          groupIds: [
-            'Gateway'
-          ]
-        }
-      }
-    ]
-  }
-}
-
-resource apimDNSZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if ((deployAPIm == 'yes') && (deployPrivateZones == 'yes')) {
-  name: 'privatelink.azure-api.net'
-  location: 'global'
-  tags: tags
-}
-
-resource apimVirtualNetworkLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = if ((deployAPIm == 'yes') && (deployPrivateZones == 'yes')) {
-  parent: apimDNSZone
-  name: 'apim-${uniqueName}-vnl'
-  location: 'global'
-  tags: tags
-  properties: {
-    virtualNetwork: {
-      id: virtualNetwork.id
-    }
-    registrationEnabled: false
-  }
-}
-
-//var swaHostname = split(staticWebApp.properties.defaultHostname, '.')[0]
-
-resource apimSymbolicname 'Microsoft.Network/privateDnsZones/A@2020-06-01' = if ((deployAPIm == 'yes') && (deployPrivateZones == 'yes')) {
-  name: apiManagementService.name
-  //name: swaHostname
-  //name: staticWebApp
-  parent: apimDNSZone
-
-  properties: {
-    ttl: 3600
-
-    aRecords: [
-      {
-        //  ipv4Address: '192.168.1.1'
-
-        ipv4Address: apimPrivateEndpoint.properties.customDnsConfigs[0].ipAddresses[0]
-      }
-    ]
-
-  }
-
-  dependsOn: []
-}
-
-@description('Remote Vnet')
-param remoteVirtualNetworkId string = '/subscriptions/11b1e7dd-d35d-435f-9c04-274e5e673671/resourceGroups/usnc-core01/providers/Microsoft.Network/virtualNetworks/usnc-vnet-core01'
-
-@allowed([ 'yes', 'no' ])
-@description('Deploy VNet peering')
-param deployVnetPeering string = 'yes'
-
-resource coreVNET 'Microsoft.Network/virtualNetworks@2021-05-01' existing = {
-  name: 'usnc-vnet-core01'
-  scope: resourceGroup('11b1e7dd-d35d-435f-9c04-274e5e673671', 'usnc-core01')
-}
-
-resource peerToHub 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2023-04-01' = if (deployVnetPeering == 'yes') {
-  name: 'vnet-${uniqueName}-To-usnc-vnet-core01'
-  parent: virtualNetwork
-  properties: {
-
-    allowVirtualNetworkAccess: true
-    allowForwardedTraffic: false
-    allowGatewayTransit: false
-    useRemoteGateways: true
-    remoteVirtualNetwork: {
-      id: remoteVirtualNetworkId
-    }
-
-  }
-}
-
-// deploy to different scope
-//module peering 'vnetPeering.bicep' = if (deployVnetPeering == 'yes') {
-module peering 'vnetPeering.bicep' = {
-  name: 'deployVnetPeering'
-  scope: resourceGroup('11b1e7dd-d35d-435f-9c04-274e5e673671', 'usnc-core01')
-  params: {
-    uniqueName: contains(deployVnetPeering, 'yes') ? uniqueName : ''
-    spokeVnetId: contains(deployVnetPeering, 'yes') ? virtualNetwork.id : ''
-
-  }
-}
-
-param deployPrivateZoneArecords string = 'yes'
-
-var azureStaticAppsArecord = {
-  name: split(staticWebApp.properties.defaultHostname, '.')[0]
-  //name: staticWebApp.name
-  ip: swaPrivateEndpoint.properties.customDnsConfigs[0].ipAddresses[0]
-}
-var azureAPIMArecord = {
-  name: apiManagementService.name
-  ip: apimPrivateEndpoint.properties.customDnsConfigs[0].ipAddresses[0]
-}
-var azureWebsitesArecord = {
-  name: appServiceWeb.name
-  ip: appPrivateEndpoint.properties.customDnsConfigs[0].ipAddresses[0]
-}
-var azureBlobArecord = {
-  name: storageaccount.name
-  ip: staPrivateEndpoint.properties.customDnsConfigs[0].ipAddresses[0]
-}
-var azureOpenAiArecord = {
-  name: toLower(uniqueName)
-  ip: openaiPrivateEndpoint.properties.customDnsConfigs[0].ipAddresses[0]
-}
-var azureWebsitesScmArecord = {
-  name: appServiceWeb.name
-  ip: appPrivateEndpoint.properties.customDnsConfigs[0].ipAddresses[0]
-}
-
-var cosmosAccountArecord = {
-  name: cosmosAccount.name
-  ip: cosmosPrivateEndpoint.properties.customDnsConfigs[0].ipAddresses[0]
-}
-
-var azureCognitiveSearchArecord = {
-  name: azureCognitiveSearch.name
-  ip: acsPrivateEndpoint.properties.customDnsConfigs[0].ipAddresses[0]
-}
-
-var nothing = {
-  name: ''
-  ip: ''
-}
-
-// Create A records in existing Private Zones
-
-module privateZoneArecords 'privatezones-s01core.bicep' = {
-  name: 'deployPrivateZoneARecords'
-  scope: resourceGroup('11b1e7dd-d35d-435f-9c04-274e5e673671', 'usnc-rg-privatedns-core01')
-  params: {
-    azureStaticAppsArecord: contains(deployPrivateZoneArecords, 'yes') ? azureStaticAppsArecord : nothing
-    azureAPIMArecord: contains(deployPrivateZoneArecords, 'yes') ? azureAPIMArecord : nothing
-    azureWebsitesArecord: contains(deployPrivateZoneArecords, 'yes') ? azureWebsitesArecord : nothing
-    azureBlobArecord: contains(deployPrivateZoneArecords, 'yes') ? azureBlobArecord : nothing
-    azureOpenAiArecord: contains(deployPrivateZoneArecords, 'yes') ? azureOpenAiArecord : nothing
-    azureWebsitesScmArecord: contains(deployPrivateZoneArecords, 'yes') ? azureWebsitesScmArecord : nothing
-    azureCognitiveSearchArecord: contains(deployPrivateZoneArecords, 'yes') ? azureCognitiveSearchArecord : nothing
-  }
-}
-
-module privateZoneArecordsS02 'privatezones-S02.bicep' = {
-  name: 'deployPrivateZoneARecords-S02'
-  scope: resourceGroup('8701016c-7d8e-4940-993c-fda1a8417f46', 'usnc-rg-s02-vnet-prd2')
-  params: {
-    cosmosAccountArecord: contains(deployPrivateZoneArecords, 'yes') ? cosmosAccountArecord : nothing
   }
 }
 
@@ -2385,16 +1201,3 @@ output webappUrl string = staticWebApp.properties.defaultHostname
 output webappName string = staticWebApp.name
 output webapiUrl string = appServiceWeb.properties.defaultHostName
 output webapiName string = appServiceWeb.name
-//output pip object = publicIp
-output vmfqdn string = publicIp.properties.dnsSettings.fqdn
-//output swape object = swaPrivateEndpoint
-
-//output privip object = swaPrivateEndpoint.properties.customDnsConfigs[0]
-
-output privip2 string = swaPrivateEndpoint.properties.customDnsConfigs[0].ipAddresses[0]
-
-output staticWebAppHostName string = split(staticWebApp.properties.defaultHostname, '.')[0]
-
-output staticWebAppHostNamefqdn string = staticWebApp.properties.defaultHostname
-
-output cosmosPrivateIps object = cosmosPrivateEndpoint.properties.customDnsConfigs[0]

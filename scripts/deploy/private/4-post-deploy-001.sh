@@ -8,7 +8,7 @@ swa_hostname=$(az staticwebapp show  -n "swa-${unquie_name}" -g "rg-${RG}" --que
 
 echo "SWA default hostname: ${swa_hostname}"
 
-az webapp cors add -g  "rg-${RG}" -n "app-${unquie_name}-webapi" --allowed-origins "https://${swa_hostname}" "https://chatkna.kaplan.com"
+az webapp cors add -g  "rg-${RG}" -n "app-${unquie_name}-webapi" --allowed-origins "https://${swa_hostname}" "https://chatkna.int.kaplan.com"
 
 
 

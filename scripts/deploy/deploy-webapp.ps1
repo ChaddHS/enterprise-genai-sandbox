@@ -100,7 +100,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Host "Deploying webapp..."
-swa deploy
+swa deploy --no-use-keychain
 if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }

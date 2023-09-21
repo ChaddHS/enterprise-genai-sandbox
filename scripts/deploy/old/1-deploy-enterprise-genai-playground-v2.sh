@@ -3,6 +3,7 @@
 
 az account set --subscription f622d6d5-7dd6-4999-9e7a-3401833df0e6
 
+cd ..
 ./deploy-azure.sh --subscription f622d6d5-7dd6-4999-9e7a-3401833df0e6 \
 --deployment-name enterprise-genai-playground-v2 \
 --ai-service AzureOpenAI \

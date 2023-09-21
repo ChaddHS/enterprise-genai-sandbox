@@ -1161,6 +1161,14 @@ resource staticWebApp 'Microsoft.Web/staticSites@2022-09-01' = {
 //   // }
 // }
 
+resource symbolicname 'Microsoft.Web/staticSites/config@2022-09-01' = {
+  name: 'appsettings'
+  parent: staticWebApp
+  properties: {
+
+  }
+}
+
 // Deploy Azure API Management
 
 resource apiManagementService 'Microsoft.ApiManagement/service@2021-08-01' = if (deployAPIm) {

@@ -153,16 +153,17 @@ param sqlAdminPassword string = newGuid()
 param tags object = {
   APPLICATION: 'Enterprise-GenAI'
   ENVIRONMENT: 'sbx'
-  BUSINESS_UNIT: ''
-  OPERATING_HOURS: ''
+  BUSINESS_UNIT: 'KNA'
+  OPERATING_HOURS: '24x7'
   NAME: 'Enterprise-GenAI'
   DEPARTMENT: ''
-  OWNER: ''
+  OWNER: 'brandon.vreuls@kaplan.edu'
   BUSINESS_TIER: 'Low'
   DATA_CLASSIFICATION: ''
   BACKUP: 'False'
-  REQUESTER: ''
-  GIT_REPO: ''
+  REQUESTER: 'joseph.susai@kaplan.edu'
+  COST_CENTER: '302_130077 - Artificial Intelligence Projects'
+  GIT_REPO: 'https://github.com/kss-github/enterprise-genai-sandbox.git'
 }
 
 @description('Static Web App Tier')
@@ -737,6 +738,7 @@ resource appServicePlan 'Microsoft.Web/serverfarms@2022-03-01' = {
   tags: tags
   sku: {
     name: webAppServiceSku
+    tier: 'Standard'
   }
 }
 
@@ -1045,177 +1047,6 @@ resource appServiceWebConfig 'Microsoft.Web/sites/config@2022-09-01' = {
     ]
   }
 }
-
-// resource appServiceWebConfigprivate 'Microsoft.Web/sites/config@2022-09-01' = if (deployment == 'public') {
-//   parent: appServiceWeb
-//   name: 'web'
-//   properties: {
-//     alwaysOn: false
-//     cors: {
-//       allowedOrigins: [
-//         'http://localhost:3000'
-//         'https://localhost:3000'
-//       ]
-//       supportCredentials: true
-//     }
-//     detailedErrorLoggingEnabled: true
-//     minTlsVersion: '1.2'
-//     netFrameworkVersion: 'v6.0'
-//     use32BitWorkerProcess: false
-//     vnetRouteAllEnabled: true
-//     webSocketsEnabled: true
-//     appSettings: [
-//       {
-//         name: 'AIService:Type'
-//         value: aiService
-//       }
-//       {
-//         name: 'AIService:Endpoint'
-//         value: deployNewAzureOpenAI ? openAI.properties.endpoint : aiEndpoint
-//       }
-//       {
-//         name: 'AIService:Key'
-//         value: deployNewAzureOpenAI ? openAI.listKeys().key1 : aiApiKey
-//       }
-//       {
-//         name: 'AIService:Models:Completion'
-//         value: completionModel
-//       }
-//       {
-//         name: 'AIService:Models:Embedding'
-//         value: embeddingModel
-//       }
-//       {
-//         name: 'AIService:Models:Planner'
-//         value: plannerModel
-//       }
-//       {
-//         name: 'Authentication:Type'
-//         value: 'AzureAd'
-//       }
-//       {
-//         name: 'Authentication:AzureAd:Instance'
-//         value: azureAdInstance
-//       }
-//       {
-//         name: 'Authentication:AzureAd:TenantId'
-//         value: azureAdTenantId
-//       }
-//       {
-//         name: 'Authentication:AzureAd:ClientId'
-//         value: webApiClientId
-//       }
-//       {
-//         name: 'Authentication:AzureAd:Scopes'
-//         value: 'access_as_user'
-//       }
-//       {
-//         name: 'ChatStore:Type'
-//         value: deployCosmosDB ? 'cosmos' : 'volatile'
-//       }
-//       {
-//         name: 'ChatStore:Cosmos:Database'
-//         value: 'CopilotChat'
-//       }
-//       {
-//         name: 'ChatStore:Cosmos:ChatSessionsContainer'
-//         value: 'chatsessions'
-//       }
-//       {
-//         name: 'ChatStore:Cosmos:ChatMessagesContainer'
-//         value: 'chatmessages'
-//       }
-//       {
-//         name: 'ChatStore:Cosmos:ChatMemorySourcesContainer'
-//         value: 'chatmemorysources'
-//       }
-//       {
-//         name: 'ChatStore:Cosmos:ChatParticipantsContainer'
-//         value: 'chatparticipants'
-//       }
-//       {
-//         name: 'ChatStore:Cosmos:ConnectionString'
-//         value: deployCosmosDB ? cosmosAccount.listConnectionStrings().connectionStrings[0].connectionString : ''
-//       }
-//       {
-//         name: 'MemoryStore:Type'
-//         value: memoryStore
-//       }
-//       {
-//         name: 'MemoryStore:Qdrant:Host'
-//         value: memoryStore == 'Qdrant' ? 'https://${appServiceQdrant.properties.defaultHostName}' : ''
-//       }
-//       {
-//         name: 'MemoryStore:Qdrant:Port'
-//         value: '443'
-//       }
-//       {
-//         name: 'MemoryStore:AzureCognitiveSearch:UseVectorSearch'
-//         value: 'true'
-//       }
-//       {
-//         name: 'MemoryStore:AzureCognitiveSearch:Endpoint'
-//         value: memoryStore == 'AzureCognitiveSearch' ? 'https://${privAcsName}.search.windows.net' : ''
-//       }
-//       {
-//         name: 'MemoryStore:AzureCognitiveSearch:Key'
-//         value: memoryStore == 'AzureCognitiveSearch' ? azureCognitiveSearch.listAdminKeys().primaryKey : ''
-//       }
-//       {
-//         name: 'MemoryStore:Postgres:ConnectionString'
-//         value: memoryStore == 'Postgres' ? 'Host=${postgreServerGroup.properties.serverNames[0].fullyQualifiedDomainName}:5432;Username=citus;Password=${sqlAdminPassword};Database=citus' : ''
-//       }
-//       {
-//         name: 'AzureSpeech:Region'
-//         value: location
-//       }
-//       {
-//         name: 'AzureSpeech:Key'
-//         value: deploySpeechServices ? speechAccount.listKeys().key1 : ''
-//       }
-//       {
-//         name: 'AllowedOrigins'
-//         value: '[*]' // Defer list of allowed origins to the Azure service app's CORS configuration
-//       }
-//       {
-//         name: 'Kestrel:Endpoints:Https:Url'
-//         value: 'https://localhost:443'
-//       }
-//       {
-//         name: 'Logging:LogLevel:Default'
-//         value: 'Warning'
-//       }
-//       {
-//         name: 'Logging:LogLevel:CopilotChat.WebApi'
-//         value: 'Warning'
-//       }
-//       {
-//         name: 'Logging:LogLevel:Microsoft.SemanticKernel'
-//         value: 'Warning'
-//       }
-//       {
-//         name: 'Logging:LogLevel:Microsoft.AspNetCore.Hosting'
-//         value: 'Warning'
-//       }
-//       {
-//         name: 'Logging:LogLevel:Microsoft.Hosting.Lifetimel'
-//         value: 'Warning'
-//       }
-//       {
-//         name: 'ApplicationInsights:ConnectionString'
-//         value: appInsights.properties.ConnectionString
-//       }
-//       {
-//         name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
-//         value: appInsights.properties.ConnectionString
-//       }
-//       {
-//         name: 'ApplicationInsightsAgent_EXTENSION_VERSION'
-//         value: '~2'
-//       }
-//     ]
-//   }
-// }
 
 resource appServiceWebDeploy 'Microsoft.Web/sites/extensions@2022-09-01' = if (deployWebApiPackage) {
   name: 'MSDeploy'
@@ -2347,6 +2178,11 @@ var cosmosAccountArecord = {
   ip: cosmosPrivateEndpoint.properties.customDnsConfigs[0].ipAddresses[0]
 }
 
+var cosmosAccountRegionArecord = {
+  name: '${cosmosAccount.name}-${location}'
+  ip: cosmosPrivateEndpoint.properties.customDnsConfigs[1].ipAddresses[0]
+}
+
 var azureCognitiveSearchArecord = {
   name: azureCognitiveSearch.name
   ip: acsPrivateEndpoint.properties.customDnsConfigs[0].ipAddresses[0]
@@ -2378,6 +2214,7 @@ module privateZoneArecordsS02 'privatezones-S02.bicep' = {
   scope: resourceGroup('8701016c-7d8e-4940-993c-fda1a8417f46', 'usnc-rg-s02-vnet-prd2')
   params: {
     cosmosAccountArecord: contains(deployPrivateZoneArecords, 'yes') ? cosmosAccountArecord : nothing
+    cosmosAccountRegionArecord: contains(deployPrivateZoneArecords, 'yes') ? cosmosAccountRegionArecord : nothing
   }
 }
 

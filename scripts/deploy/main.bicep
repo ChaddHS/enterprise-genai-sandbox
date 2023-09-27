@@ -459,6 +459,27 @@ resource appServiceWeb 'Microsoft.Web/sites@2022-09-01' = {
   }
 }
 
+resource appServiceWebLog 'Microsoft.Web/sites/config@2022-09-01' = {
+  name: 'logs'
+  parent: appServiceWeb
+  properties: {
+    applicationLogs: {
+
+      fileSystem: {
+        level: 'Error'
+      }
+    }
+    httpLogs: {
+      fileSystem: {
+        enabled: true
+        retentionInDays: 5
+        retentionInMb: 50
+      }
+    }
+  }
+
+}
+
 resource appServiceWebConfig 'Microsoft.Web/sites/config@2022-09-01' = {
   parent: appServiceWeb
   name: 'web'
@@ -478,6 +499,10 @@ resource appServiceWebConfig 'Microsoft.Web/sites/config@2022-09-01' = {
     vnetRouteAllEnabled: true
     webSocketsEnabled: true
     appSettings: [
+      // {
+      //   name: 'ASPNETCORE_ENVIRONMENT'
+      //   value: 'Prod'
+      // }
       {
         name: 'AIService:Type'
         value: aiService
@@ -1164,9 +1189,7 @@ resource staticWebApp 'Microsoft.Web/staticSites@2022-09-01' = {
 resource symbolicname 'Microsoft.Web/staticSites/config@2022-09-01' = {
   name: 'appsettings'
   parent: staticWebApp
-  properties: {
-
-  }
+  properties: {}
 }
 
 // Deploy Azure API Management
@@ -1182,6 +1205,18 @@ resource apiManagementService 'Microsoft.ApiManagement/service@2021-08-01' = if 
   properties: {
     publisherEmail: publisherEmail
     publisherName: publisherName
+  }
+}
+
+resource apimLogger 'Microsoft.ApiManagement/service/loggers@2023-03-01-preview' = {
+  name: 'apim-copilot-logger'
+  parent: apiManagementService
+  properties: {
+    //  credentials: {}
+    description: 'apim-logger'
+    //  isBuffered: bool
+    loggerType: 'azureMonitor'
+    // resourceId: 'string'
   }
 }
 
@@ -1209,3 +1244,5 @@ output webappUrl string = staticWebApp.properties.defaultHostname
 output webappName string = staticWebApp.name
 output webapiUrl string = appServiceWeb.properties.defaultHostName
 output webapiName string = appServiceWeb.name
+
+output apiManagementEndpoint object = apiManagementService

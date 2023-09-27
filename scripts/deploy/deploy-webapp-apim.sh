@@ -17,6 +17,7 @@ usage() {
     echo "  -v  --version VERSION                  Version to display in UI (default: 1.0.0)"
     echo "  -i  --version-info INFO                Additional info to put in version details"
     echo "  -nr, --no-redirect                     Do not attempt to register redirect URIs with the client application"
+    echo "  -apim --use-apim                       Use APIM as backend"
 }
 
 # Parse arguments
@@ -50,6 +51,11 @@ while [[ $# -gt 0 ]]; do
         ;;
         -i|--version-info)
         VERSION_INFO="$2"
+        shift
+        shift
+        ;;
+        -apim|--use-apim)
+        USE_APIM="$2"
         shift
         shift
         ;;
@@ -97,6 +103,19 @@ eval WEB_API_TENANT_ID=$(echo $WEB_API_SETTINGS | jq '.[] | select(.name=="Authe
 eval WEB_API_INSTANCE=$(echo $WEB_API_SETTINGS | jq '.[] | select(.name=="Authentication:AzureAd:Instance").value')
 eval WEB_API_SCOPE=$(echo $WEB_API_SETTINGS | jq '.[] | select(.name=="Authentication:AzureAd:Scopes").value')
 
+# KNA code
+if [ "$USE_APIM" = true ] ; then
+    echo 'Using APIM as back-end'
+    eval WEB_API_URL=$(echo $DEPLOYMENT_JSON | jq -r '.properties.outputs.apiManagementEndpoint.value')
+    eval WEB_API_URL=$(echo $WEB_API_URL | sed -E 's/^\s*.*:\/\///g')
+    echo "APIM WEB_API_URL: $WEB_API_URL"
+
+    eval WEB_API_NAME=$(echo $DEPLOYMENT_JSON | jq -r '.properties.outputs.apiManagementName.value')
+    echo "APIM WEB_API_NAME: $WEB_API_NAME"
+
+fi
+
+
 ENV_FILE_PATH="$SCRIPT_ROOT/../../webapp/.env"
 echo "Writing environment variables to '$ENV_FILE_PATH'..."
 echo "REACT_APP_BACKEND_URI=https://$WEB_API_URL/" > $ENV_FILE_PATH
@@ -113,6 +132,7 @@ echo "Writing swa-cli.config.json..."
 SWA_CONFIG_FILE_PATH="$SCRIPT_ROOT/../../webapp/swa-cli.config.json"
 SWA_CONFIG_TEMPLATE_FILE_PATH="$SCRIPT_ROOT/../../webapp/template.swa-cli.config.json"
 swaConfig=`cat $SWA_CONFIG_TEMPLATE_FILE_PATH`
+echo "###"
 swaConfig=$(echo $swaConfig | sed "s/{{appDevserverUrl}}/https:\/\/${WEB_APP_URL}/")
 swaConfig=$(echo $swaConfig | sed "s/{{appName}}/$WEB_API_NAME/")
 swaConfig=$(echo $swaConfig | sed "s/{{resourceGroup}}/$RESOURCE_GROUP/")

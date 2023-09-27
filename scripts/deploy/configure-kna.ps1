@@ -1,0 +1,1 @@
+.\Configure.ps1 -AIService AzureOpenAI -APIKey b9c2d7e7772544d7ad90a81ecf96c727 -Endpoint https://copichat-vnfoe6bhgcytw.openai.azure.com/

@@ -890,6 +890,10 @@ resource appServiceWebConfig 'Microsoft.Web/sites/config@2022-09-01' = {
     webSocketsEnabled: true
     appSettings: [
       {
+        name: 'ASPNETCORE_ENVIRONMENT'
+        value: 'Development'
+      }
+      {
         name: 'AIService:Type'
         value: aiService
       }

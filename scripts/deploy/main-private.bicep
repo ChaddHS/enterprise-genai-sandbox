@@ -407,7 +407,39 @@ param kaplanIps array = [
   '52.7.14.1/32'
   '54.162.10.222/32'
   '54.81.154.214/32'
-  '96.60.175.227'
+  '96.60.175.227/32'
+
+]
+
+param azurePortalIps array = [
+  '104.42.195.92/32'
+  '40.76.54.131/32'
+  '52.176.6.30/32'
+  '52.169.50.45/32'
+  '52.187.184.26/32'
+]
+
+var allIps = concat(kaplanIps, azurePortalIps)
+
+param cosmosdbAllowedIps array = [
+  {
+    ipAddressOrRange: '104.42.195.92/32'
+  }
+  {
+    ipAddressOrRange: '40.76.54.131/32'
+  }
+  {
+    ipAddressOrRange: '52.176.6.30/32'
+  }
+  {
+    ipAddressOrRange: '52.169.50.45/32'
+  }
+  {
+    ipAddressOrRange: '52.187.184.26/32'
+  }
+  {
+    ipAddressOrRange: '0.0.0.0'
+  }
 ]
 
 //
@@ -876,6 +908,27 @@ resource sitesSymbolicnamescm 'Microsoft.Network/privateDnsZones/A@2020-06-01' =
   dependsOn: []
 }
 
+resource appServiceWebLog 'Microsoft.Web/sites/config@2022-09-01' = {
+  name: 'logs'
+  parent: appServiceWeb
+  properties: {
+    applicationLogs: {
+
+      fileSystem: {
+        level: 'Error'
+      }
+    }
+    httpLogs: {
+      fileSystem: {
+        enabled: true
+        retentionInDays: 3
+        retentionInMb: 50
+      }
+    }
+  }
+
+}
+
 resource appServiceWebConfig 'Microsoft.Web/sites/config@2022-09-01' = {
   //resource appServiceWebConfig 'Microsoft.Web/sites/config@2022-09-01' = if (deployment == 'public') {
   parent: appServiceWeb
@@ -886,6 +939,8 @@ resource appServiceWebConfig 'Microsoft.Web/sites/config@2022-09-01' = {
       allowedOrigins: [
         'http://localhost:3000'
         'https://localhost:3000'
+        'https://chatkna.kaplan.com'
+        'https://chatkna.int.kaplan.com'
       ]
       supportCredentials: true
     }
@@ -895,6 +950,7 @@ resource appServiceWebConfig 'Microsoft.Web/sites/config@2022-09-01' = {
     use32BitWorkerProcess: false
     vnetRouteAllEnabled: true
     webSocketsEnabled: true
+
     appSettings: [
       {
         name: 'AIService:Type'
@@ -1447,14 +1503,40 @@ resource webNsg 'Microsoft.Network/networkSecurityGroups@2022-11-01' = {
       {
         name: 'AllowAnyHTTPSInbound'
         properties: {
-          protocol: 'TCP'
+          protocol: '*'
           sourcePortRange: '*'
-          destinationPortRange: '443'
+          destinationPortRange: '*'
           sourceAddressPrefix: '*'
           destinationAddressPrefix: '*'
           access: 'Allow'
           priority: 100
           direction: 'Inbound'
+        }
+      }
+      // {
+      //   name: 'AllowAnyHTTPInbound'
+      //   properties: {
+      //     protocol: 'TCP'
+      //     sourcePortRange: '*'
+      //     destinationPortRange: '80'
+      //     sourceAddressPrefix: '*'
+      //     destinationAddressPrefix: '*'
+      //     access: 'Allow'
+      //     priority: 105
+      //     direction: 'Inbound'
+      //   }
+      // }
+      {
+        name: 'AllowAnyOutbound'
+        properties: {
+          protocol: '*'
+          sourcePortRange: '*'
+          destinationPortRange: '*'
+          sourceAddressPrefix: '*'
+          destinationAddressPrefix: '*'
+          access: 'Allow'
+          priority: 100
+          direction: 'Outbound'
         }
       }
     ]
@@ -1467,19 +1549,33 @@ resource bastionnsg 'Microsoft.Network/networkSecurityGroups@2022-11-01' = if (d
   tags: tags
   properties: {
     securityRules: [
+      // {
+      //   name: 'AllowAnyHTTPSInbound'
+      //   properties: {
+      //     protocol: 'TCP'
+      //     sourcePortRange: '*'
+      //     destinationPortRange: '3389'
+      //     sourceAddressPrefixes: kaplanIps
+      //     destinationAddressPrefix: '*'
+      //     access: 'Allow'
+      //     priority: 100
+      //     direction: 'Inbound'
+      //   }
+      //}
       {
-        name: 'AllowAnyHTTPSInbound'
+        name: 'AllowAnyInbound'
         properties: {
-          protocol: 'TCP'
+          protocol: '*'
           sourcePortRange: '*'
-          destinationPortRange: '3389'
-          sourceAddressPrefixes: kaplanIps
+          destinationPortRange: '*'
+          sourceAddressPrefix: '*'
           destinationAddressPrefix: '*'
           access: 'Allow'
           priority: 100
           direction: 'Inbound'
         }
       }
+
     ]
   }
 }
@@ -1519,6 +1615,9 @@ resource cosmosAccount 'Microsoft.DocumentDB/databaseAccounts@2023-04-15' = if (
   kind: 'GlobalDocumentDB'
   tags: tags
   properties: {
+    networkAclBypass: 'AzureServices'
+    publicNetworkAccess: 'Enabled'
+    ipRules: cosmosdbAllowedIps
     consistencyPolicy: { defaultConsistencyLevel: 'Session' }
     locations: [ {
         locationName: location
@@ -2235,3 +2334,7 @@ output staticWebAppHostName string = split(staticWebApp.properties.defaultHostna
 output staticWebAppHostNamefqdn string = staticWebApp.properties.defaultHostname
 
 output cosmosPrivateIps object = cosmosPrivateEndpoint.properties.customDnsConfigs[0]
+
+output apiManagementEndpoint string = apiManagementService.properties.gatewayUrl
+
+output apiManagementName string = apiManagementService.name

@@ -1245,4 +1245,6 @@ output webappName string = staticWebApp.name
 output webapiUrl string = appServiceWeb.properties.defaultHostName
 output webapiName string = appServiceWeb.name
 
-output apiManagementEndpoint object = apiManagementService
+output apiManagementEndpoint string = apiManagementService.properties.gatewayUrl
+
+output apiManagementName string = apiManagementService.name

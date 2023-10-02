@@ -10,7 +10,7 @@ param name string = 'copichat'
 
 @description('SKU for the Azure App Service plan')
 @allowed([ 'B1', 'B3', 'S1', 'S2', 'S3', 'P1V3', 'P2V3', 'I1V2', 'I2V2' ])
-param webAppServiceSku string = 'S3'
+param webAppServiceSku string = 'S1'
 
 @description('Location of package to deploy as the web service')
 #disable-next-line no-hardcoded-env-urls
@@ -712,65 +712,65 @@ resource openaiSymbolicname2 'Microsoft.Network/privateDnsZones/A@2020-06-01' = 
 //   }
 // }
 
-// resource openAI_completionModel 'Microsoft.CognitiveServices/accounts/deployments@2022-12-01' = if (deployNewAzureOpenAI) {
-//   //resource openAI_completionModel 'Microsoft.CognitiveServices/accounts/deployments@2022-12-01' = if (deployNewAzureOpenAI) {
-//   parent: openAI
-//   name: completionModel
+resource openAI_completionModel 'Microsoft.CognitiveServices/accounts/deployments@2022-12-01' = if (deployNewAzureOpenAI) {
+  //resource openAI_completionModel 'Microsoft.CognitiveServices/accounts/deployments@2022-12-01' = if (deployNewAzureOpenAI) {
+  parent: openAI
+  name: completionModel
 
-//   properties: {
+  properties: {
 
-//     model: {
-//       format: 'OpenAI'
-//       name: completionModel
-//       version: modelVersion
-//     }
-//     scaleSettings: {
-//       // capacity: 9
-//       scaleType: 'Standard'
-//     }
-//   }
-//   // sku: {
-//   //   name: 'S0'
-//   //   //capacity: 120
-//   //   tier: 'Standard'
-//   // }
-// }
+    model: {
+      format: 'OpenAI'
+      name: completionModel
+      // version: modelVersion
+    }
+    scaleSettings: {
+      //  capacity: 30
+      scaleType: 'Standard'
+    }
+  }
+  // sku: {
+  //   name: 'S0'
+  //   //capacity: 120
+  //   tier: 'Standard'
+  // }
+}
 
-// resource openAI_embeddingModel 'Microsoft.CognitiveServices/accounts/deployments@2022-12-01' = if (deployNewAzureOpenAI) {
-//   //resource openAI_embeddingModel 'Microsoft.CognitiveServices/accounts/deployments@2022-12-01' = if (deployNewAzureOpenAI) {
-//   parent: openAI
-//   name: embeddingModel
-//   properties: {
-//     model: {
-//       format: 'OpenAI'
-//       name: embeddingModel
-//       // version: modelVersion
-//     }
+resource openAI_embeddingModel 'Microsoft.CognitiveServices/accounts/deployments@2022-12-01' = if (deployNewAzureOpenAI) {
+  //resource openAI_embeddingModel 'Microsoft.CognitiveServices/accounts/deployments@2022-12-01' = if (deployNewAzureOpenAI) {
+  parent: openAI
+  name: embeddingModel
+  properties: {
+    model: {
+      format: 'OpenAI'
+      name: embeddingModel
+      // version: modelVersion
+    }
 
-//     scaleSettings: {
-//       //capacity: 9
-//       scaleType: 'Standard'
-//     }
-//   }
+    scaleSettings: {
+      //  capacity: 30
+      scaleType: 'Standard'
+    }
+  }
 
-//   //   sku: {
-//   //     name: 'S0'
-//   //     capacity: 10
-//   //     tier: 'Standard'
-//   //   }
-//   dependsOn: [// This "dependency" is to create models sequentially because the resource
-//     openAI_completionModel // provider does not support parallel creation of models properly.
-//   ]
-// }
+  //   sku: {
+  //     name: 'S0'
+  //     capacity: 10
+  //     tier: 'Standard'
+  //   }
+  dependsOn: [// This "dependency" is to create models sequentially because the resource
+    openAI_completionModel // provider does not support parallel creation of models properly.
+  ]
+}
 
-resource appServicePlan 'Microsoft.Web/serverfarms@2022-03-01' = {
+resource appServicePlan 'Microsoft.Web/serverfarms@2022-09-01' = {
   name: 'asp-${uniqueName}-webapi'
   location: location
   kind: 'app'
   tags: tags
   sku: {
     name: webAppServiceSku
-    tier: 'Standard'
+    // tier: 'Standard'
   }
 }
 
@@ -952,6 +952,10 @@ resource appServiceWebConfig 'Microsoft.Web/sites/config@2022-09-01' = {
     webSocketsEnabled: true
 
     appSettings: [
+      {
+        name: 'ASPNETCORE_ENVIRONMENT'
+        value: 'Development'
+      }
       {
         name: 'AIService:Type'
         value: aiService

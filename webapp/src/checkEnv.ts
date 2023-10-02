@@ -6,7 +6,7 @@ import { AuthType } from './libs/auth/AuthHelper';
  */
 export const getMissingEnvVariables = () => {
     // Should be aligned with variables defined in .env.example
-    const envVariables = ['REACT_APP_BACKEND_URI'];
+    const envVariables = ['REACT_APP_BACKEND_URI', 'REACT_APP_API_URL'];
     const missingVariables = [];
 
     for (const variable of envVariables) {

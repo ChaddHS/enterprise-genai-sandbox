@@ -136,6 +136,13 @@ param vnetCIDR string = '172.22.26.0/24'
 //   subnet: '172.22.26.224/29'
 // }
 
+@description('Cognitive Search Tier')
+@allowed([
+  'basic'
+  'standard'
+])
+param cognitiveSearchTier string = 'standard'
+
 @description('Hash of the resource group ID')
 var rgIdHash = uniqueString(resourceGroup().id)
 
@@ -941,6 +948,8 @@ resource appServiceWebConfig 'Microsoft.Web/sites/config@2022-09-01' = {
         'https://localhost:3000'
         'https://chatkna.kaplan.com'
         'https://chatkna.int.kaplan.com'
+        'https://${staticWebApp.properties.defaultHostname}'
+        '${apiManagementService.properties.gatewayUrl}'
       ]
       supportCredentials: true
     }
@@ -1149,7 +1158,7 @@ resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2022-10
     sku: {
       name: 'PerGB2018'
     }
-    retentionInDays: 90
+    retentionInDays: 60
     features: {
       searchVersion: 1
       legacy: 0
@@ -1319,7 +1328,7 @@ resource azureCognitiveSearch 'Microsoft.Search/searchServices@2022-09-01' = if 
   location: location
   tags: tags
   sku: {
-    name: 'basic'
+    name: cognitiveSearchTier
   }
   properties: {
     replicaCount: 1
@@ -1494,6 +1503,22 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2021-05-01' = {
         }
 
       }
+
+      {
+        name: 'apimSubnet'
+        properties: {
+          addressPrefix: '172.22.26.192/27'
+          networkSecurityGroup: {
+
+            id: apimnsg.id
+          }
+          serviceEndpoints: []
+          delegations: []
+          privateEndpointNetworkPolicies: 'Disabled'
+          privateLinkServiceNetworkPolicies: 'Disabled'
+        }
+
+      }
     ]
   }
 }
@@ -1549,6 +1574,61 @@ resource webNsg 'Microsoft.Network/networkSecurityGroups@2022-11-01' = {
 
 resource bastionnsg 'Microsoft.Network/networkSecurityGroups@2022-11-01' = if (deployment == 'private') {
   name: 'nsg-${uniqueName}-bastion'
+  location: location
+  tags: tags
+  properties: {
+    securityRules: [
+      // {
+      //   name: 'AllowAnyHTTPSInbound'
+      //   properties: {
+      //     protocol: 'TCP'
+      //     sourcePortRange: '*'
+      //     destinationPortRange: '3389'
+      //     sourceAddressPrefixes: kaplanIps
+      //     destinationAddressPrefix: '*'
+      //     access: 'Allow'
+      //     priority: 100
+      //     direction: 'Inbound'
+      //   }
+      //}
+      {
+        name: 'AllowAnyInbound'
+        properties: {
+          protocol: '*'
+          sourcePortRange: '*'
+          destinationPortRange: '*'
+          sourceAddressPrefix: '*'
+          destinationAddressPrefix: '*'
+          access: 'Allow'
+          priority: 100
+          direction: 'Inbound'
+        }
+      }
+
+    ]
+  }
+}
+
+resource apimPublicIp 'Microsoft.Network/publicIPAddresses@2022-01-01' = if (deployment == 'private') {
+  name: 'apimPublicIP'
+  location: location
+  tags: tags
+  properties: {
+    publicIPAllocationMethod: 'Static'
+    dnsSettings: {
+      domainNameLabel: 'copilotapim'
+    }
+  }
+
+  sku: {
+    name: 'Standard'
+    tier: 'Regional'
+  }
+
+}
+
+resource apimnsg 'Microsoft.Network/networkSecurityGroups@2022-11-01' = if (deployment == 'private') {
+  name: 'nsg-${uniqueName}-apim'
   location: location
   tags: tags
   properties: {
@@ -2140,30 +2220,660 @@ resource apiManagementService 'Microsoft.ApiManagement/service@2021-08-01' = {
   properties: {
     publisherEmail: publisherEmail
     publisherName: publisherName
+
+    virtualNetworkConfiguration: {
+      subnetResourceId: virtualNetwork.properties.subnets[5].id
+    }
+    publicIpAddressId: apimPublicIp.id
+    virtualNetworkType: 'Internal'
   }
 }
 
-resource apimPrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-04-01' = if ((deployAPIm == 'yes') && (deployment == 'private')) {
-  name: 'apim-${uniqueName}-pe'
-  location: location
-  tags: tags
+// resource petshopApi 'Microsoft.ApiManagement/service/apis@2020-12-01' = {
+//   name: 'copilotBackend'
+//   parent: apiManagementService
+//   properties: {
+//     path: '/'
+//     apiRevision: '1'
+//     displayName: 'Co-pilot Api'
+//     description: 'Co-pilot Api'
+//     subscriptionRequired: false
+//     // serviceUrl: 'https://thijdemopetshop.azurewebsites.net/api'
+//     // subscriptionKeyParameterNames: {
+//     //   header: 'api-key'
+//     //   query: 'api-key'
+//     // }
+//     protocols: [
+//       'https'
+//     ]
+//   }
+// }
+
+// resource apimApiToWebApp 'Microsoft.ApiManagement/service/backends@2022-08-01' = {
+//   parent: apiManagementService
+//   name: 'webappbackend'
+//   properties: {
+//     title: 'Web App Backend'
+//     description: 'Web App Backend'
+//     url: appServiceWeb.properties.defaultHostName
+//     protocol: 'https'
+//   }
+//   // dependsOn: [
+//   //   apimApi
+//   // ]
+// }
+
+// resource appInsights 'Microsoft.Insights/components@2020-02-02-preview' existing = {
+//   name: '${appInsightsName}-${env}'
+// }
+// resource azureMonitorAPIManagement 'Microsoft.ApiManagement/service/loggers@2020-06-01-preview' = {
+//   name: 'your-azureMonitor'
+//   parent: apiManagementService
+//   properties: {
+//     loggerType: 'azureMonitor'
+//     description: 'Your specific Application Insights instance.'
+//     resourceId: logAnalyticsWorkspace.id
+//     // credentials: {
+//     //   instrumentationKey: appInsights.properties.InstrumentationKey
+//     // }
+//   }
+// }
+resource copilotBackend 'Microsoft.ApiManagement/service/backends@2023-03-01-preview' = {
+  name: 'WebApp_${appServiceWeb.name}'
+  parent: apiManagementService
   properties: {
-    subnet: {
-      id: virtualNetwork.properties.subnets[3].id
+    // circuitBreaker: {
+    //   rules: [
+    //     {
+    //       failureCondition: {
+    //         count: int
+    //         errorReasons: [
+    //           'string'
+    //         ]
+    //         interval: 'string'
+    //         percentage: int
+    //         statusCodeRanges: [
+    //           {
+    //             max: int
+    //             min: int
+    //           }
+    //         ]
+    //       }
+    //       name: 'string'
+    //       tripDuration: 'string'
+    //     }
+    //   ]
+    // }
+    // credentials: {
+    //   authorization: {
+    //     parameter: 'string'
+    //     scheme: 'string'
+    //   }
+    //   certificate: [
+    //     'string'
+    //   ]
+    //   certificateIds: [
+    //     'string'
+    //   ]
+    //   header: {}
+    //   query: {}
+    // }
+    description: appServiceWeb.name
+    properties: {
+      //   serviceFabricCluster: {
+      //     clientCertificateId: 'string'
+      //     clientCertificatethumbprint: 'string'
+      //     managementEndpoints: [
+      //       'string'
+      //     ]
+      //     maxPartitionResolutionRetries: int
+      //     serverCertificateThumbprints: [
+      //       'string'
+      //     ]
+      //     serverX509Names: [
+      //       {
+      //         issuerCertificateThumbprint: 'string'
+      //         name: 'string'
+      //       }
+      //     ]
+      //   }
+      // }
     }
-    privateLinkServiceConnections: [
+    protocol: 'http'
+    // proxy: {
+    //   password: 'string'
+    //   url: 'string'
+    //   username: 'string'
+    // }
+    resourceId: 'https://management.azure.com${appServiceWeb.id}'
+    // title: 'string'
+    // tls: {
+    //   validateCertificateChain: bool
+    //   validateCertificateName: bool
+    // }
+
+    url: 'https://${appServiceWeb.properties.defaultHostName}'
+  }
+
+  dependsOn: [
+    appServiceWeb
+  ]
+}
+
+// resource symbolicname 'Microsoft.ApiManagement/service/products/groupLinks@2023-03-01-preview' = {
+//   name: 'string'
+//   parent: resourceSymbolicName
+//   properties: {
+//     groupId: 'string'
+//   }
+// }
+resource apiManagementServiceApisDiagnostics 'Microsoft.ApiManagement/service/apis/diagnostics@2023-03-01-preview' = {
+  name: 'applicationinsights'
+  parent: apiManagementServiceApis
+  properties: {
+    alwaysLog: 'allErrors'
+    // backend: {
+    //   request: {
+    //     body: {
+    //       bytes: int
+    //     }
+    //     dataMasking: {
+    //       headers: [
+    //         {
+    //           mode: 'string'
+    //           value: 'string'
+    //         }
+    //       ]
+    //       queryParams: [
+    //         {
+    //           mode: 'string'
+    //           value: 'string'
+    //         }
+    //       ]
+    //     }
+    //     headers: [
+    //       'string'
+    //     ]
+    //   }
+    //   response: {
+    //     body: {
+    //       bytes: int
+    //     }
+    //     dataMasking: {
+    //       headers: [
+    //         {
+    //           mode: 'string'
+    //           value: 'string'
+    //         }
+    //       ]
+    //       queryParams: [
+    //         {
+    //           mode: 'string'
+    //           value: 'string'
+    //         }
+    //       ]
+    //     }
+    //     headers: [
+    //       'string'
+    //     ]
+    //   }
+    // }
+    // frontend: {
+    //   request: {
+    //     body: {
+    //       bytes: int
+    //     }
+    //     dataMasking: {
+    //       headers: [
+    //         {
+    //           mode: 'string'
+    //           value: 'string'
+    //         }
+    //       ]
+    //       queryParams: [
+    //         {
+    //           mode: 'string'
+    //           value: 'string'
+    //         }
+    //       ]
+    //     }
+    //     headers: [
+    //       'string'
+    //     ]
+    //   }
+    //   response: {
+    //     body: {
+    //       bytes: int
+    //     }
+    //     dataMasking: {
+    //       headers: [
+    //         {
+    //           mode: 'string'
+    //           value: 'string'
+    //         }
+    //       ]
+    //       queryParams: [
+    //         {
+    //           mode: 'string'
+    //           value: 'string'
+    //         }
+    //       ]
+    //     }
+    //     headers: [
+    //       'string'
+    //     ]
+    //   }
+    // }
+    httpCorrelationProtocol: 'W3C'
+    logClientIp: true
+    loggerId: appInsightsAPIManagement.id
+    metrics: true
+    operationNameFormat: 'Url'
+    sampling: {
+      percentage: 100
+      samplingType: 'fixed'
+    }
+    verbosity: 'information'
+  }
+}
+
+// resource basicUserGroups 'Microsoft.ApiManagement/service/groups@2023-03-01-preview' = {
+//   name: 'Enterprise-AI-BasicUser'
+//   parent: apiManagementService
+//   properties: {
+//     description: 'Enterprise AI Basic Users'
+//     displayName: 'Enterprise-AI-BasicUser'
+//     externalId: 'aad://kaplaninc.com.onmicrosoft.com/groups/b64a3f95-19e7-4b5d-8cea-5ec46be70aa0'
+//     //type: 'string'
+//   }
+// }
+
+// resource productBasicUser 'Microsoft.ApiManagement/service/products/groups@2023-03-01-preview' = {
+//   name: 'BasicUsers'
+//   parent: coPilotProduct
+// }
+
+resource coPilotProduct 'Microsoft.ApiManagement/service/products@2023-03-01-preview' = {
+  name: appServiceWeb.name
+  parent: apiManagementService
+  properties: {
+    // approvalRequired: false
+    description: 'co-pilot backend'
+    displayName: 'app-copichat-backend'
+    state: 'published'
+    subscriptionRequired: false
+    // subscriptionsLimit: int
+    // terms: 'string'
+  }
+}
+
+resource coPilotApis 'Microsoft.ApiManagement/service/products/apis@2023-03-01-preview' = {
+  name: 'app-copichat-vnfoe6bhgcytw-webapi'
+  parent: coPilotProduct
+}
+
+// resource coPilotApiLink 'Microsoft.ApiManagement/service/products/apiLinks@2023-03-01-preview' = {
+//   name: 'coPilotBackend'
+//   parent: coPilotProduct
+//   properties: {
+//     apiId: coPilotApis.id
+//   }
+// }
+
+resource appInsightsAPIManagement 'Microsoft.ApiManagement/service/loggers@2020-06-01-preview' = {
+  name: 'your-applicationinsights'
+  parent: apiManagementService
+  properties: {
+    loggerType: 'applicationInsights'
+    description: 'Your specific Application Insights instance.'
+    resourceId: appInsights.id
+    credentials: {
+      instrumentationKey: appInsights.properties.InstrumentationKey
+    }
+  }
+}
+
+resource apimDiagnosticsettings 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
+
+  scope: apiManagementService
+  name: 'test'
+  properties: {
+    workspaceId: logAnalyticsWorkspace.id
+    logs: [
       {
-        name: 'apim'
-        properties: {
-          privateLinkServiceId: apiManagementService.id
-          groupIds: [
-            'Gateway'
-          ]
-        }
+        categoryGroup: 'allLogs'
+        enabled: true
+        // retentionPolicy: {
+        //   enabled: true
+        //   days: 90
+        // }
+      }
+    ]
+    metrics: [
+      {
+        category: 'AllMetrics'
+        enabled: true
       }
     ]
   }
 }
+
+resource azureMonitorLoggerAPIManagement 'Microsoft.ApiManagement/service/loggers@2020-06-01-preview' = {
+  name: 'azuremonitor'
+  parent: apiManagementService
+  properties: {
+    loggerType: 'azureMonitor'
+    description: 'Your specific Azure Monitor instance.'
+    resourceId: logAnalyticsWorkspace.id
+    // credentials: {
+    //   instrumentationKey: appInsights.properties.InstrumentationKey
+    // }
+  }
+}
+
+// resource apimApiCopichatApis 'Microsoft.ApiManagement/service/apis@2023-03-01-preview' existing = {
+//   parent: apimApiCopichatService
+//   name: 'app-copichat-vnfoe6bhgcytw-webapi'
+// }
+
+// resource apimApiCopichatOperations 'Microsoft.ApiManagement/service/apis/operations@2023-03-01-preview' existing = {
+//   parent: apimApiCopichatApis
+//   name: '651d877772f55b372ab1ab80'
+// }
+
+// // resource apimApiCopichatOperations 'Microsoft.ApiManagement/service/apis@2023-03-01-preview' existing = {
+// //   name: 'operations/app-copichat-vnfoe6bhgcytw-webapi'
+// // }
+
+// resource apimApiCopichatService 'Microsoft.ApiManagement/service@2023-03-01-preview' existing = {
+//   name: 'apiservicevnfoe6bhgcytw'
+// }
+
+// //output apimApiCopichatOperationsObj object = apimApiCopichatOperations
+// output apimApiCopichatOperationsObj object = apimApiCopichatOperations
+
+// output apimApiCopichatDiagObj object = apimApiCopichatApis
+// output apimApiCopichatServiceObj object = apimApiCopichatService
+
+// resource apimApiCopichatApis 'Microsoft.ApiManagement/service/apis@2023-03-01-preview' existing = {
+//   name: 'app-copichat-vnfoe6bhgcytw-webapi'
+// }
+
+// resource apimApiOpsPolicy 'Microsoft.ApiManagement/service/apis/operations/policies@2023-03-01-preview' = {
+//   name: 'policy'
+//   parent: apiManagementServiceApis
+//   properties: {
+//     format: 'string'
+//     value: 'string'
+//   }
+// }
+var cors_header_part1 = '''
+<policies>
+    <inbound>
+        <base />
+        <set-backend-service id="apim-generated-policy" backend-id="'''
+
+var backend_name = copilotBackend.name
+
+var cors_header_part2 = '''" />
+        <cors allow-credentials="true">
+            <allowed-origins>
+                <origin>https://localhost:3000</origin>
+                <origin>http://localhost:3000</origin>
+                <origin>https://chatkna.int.kaplan.com</origin>
+                <origin>http://chatkna.int.kaplan.com</origin>
+                <origin>https://chatkna.kaplan.com</origin>
+                <origin>http://chatkna.kaplan.com</origin>
+'''
+
+var cors_footer = '''
+            </allowed-origins>
+            <allowed-methods>
+                <method>*</method>
+            </allowed-methods>
+            <allowed-headers>
+                <header>*</header>
+            </allowed-headers>
+            <expose-headers>
+                <header>*</header>
+            </expose-headers>
+        </cors>
+    </inbound>
+    <backend>
+        <base />
+    </backend>
+    <outbound>
+        <base />
+    </outbound>
+    <on-error>
+        <base />
+    </on-error>
+</policies>
+'''
+
+var cors_policy = '${cors_header_part1}${backend_name}${cors_header_part2}<origin>https://${staticWebApp.properties.defaultHostname}</origin> <origin>${apiManagementService.properties.gatewayUrl}</origin>${cors_footer}'
+
+resource apiManagementServicePolicies 'Microsoft.ApiManagement/service/apis/policies@2023-03-01-preview' = {
+  name: 'policy'
+  parent: apiManagementServiceApis
+  properties: {
+    format: 'xml'
+    value: cors_policy
+
+  }
+  dependsOn: [
+    apiManagementServiceApisOpsDelete
+    apiManagementServiceApisOpsGet
+    apiManagementServiceApisOpsHead
+    apiManagementServiceApisOpsPatch
+    apiManagementServiceApisOpsPost
+    apiManagementServiceApisOpsPut
+    apiManagementServiceApisOpsTrace
+
+  ]
+}
+
+resource apiManagementServiceApisOpsDelete 'Microsoft.ApiManagement/service/apis/operations@2023-03-01-preview' = {
+  name: 'apiManagementServiceApisOpsDelete'
+  parent: apiManagementServiceApis
+  properties: {
+    description: ''
+    displayName: '${appServiceWeb.name}_DELETE'
+    method: 'DELETE'
+
+    urlTemplate: '/*'
+  }
+}
+
+resource apiManagementServiceApisOpsGet 'Microsoft.ApiManagement/service/apis/operations@2023-03-01-preview' = {
+  name: 'apiManagementServiceApisOpsGet'
+  parent: apiManagementServiceApis
+  properties: {
+    description: ''
+    displayName: '${appServiceWeb.name}_GET'
+    method: 'GET'
+
+    urlTemplate: '/*'
+  }
+}
+
+resource apiManagementServiceApisOpsHead 'Microsoft.ApiManagement/service/apis/operations@2023-03-01-preview' = {
+  name: 'apiManagementServiceApisOpsHead'
+  parent: apiManagementServiceApis
+  properties: {
+    description: ''
+    displayName: '${appServiceWeb.name}_HEAD'
+    method: 'HEAD'
+
+    urlTemplate: '/*'
+  }
+}
+
+resource apiManagementServiceApisOpsPatch 'Microsoft.ApiManagement/service/apis/operations@2023-03-01-preview' = {
+  name: 'apiManagementServiceApisOpsPatch'
+  parent: apiManagementServiceApis
+  properties: {
+    description: ''
+    displayName: '${appServiceWeb.name}_PATCH'
+    method: 'PATCH'
+
+    urlTemplate: '/*'
+  }
+}
+
+resource apiManagementServiceApisOpsPost 'Microsoft.ApiManagement/service/apis/operations@2023-03-01-preview' = {
+  name: 'apiManagementServiceApisOpsPost'
+  parent: apiManagementServiceApis
+  properties: {
+    description: ''
+    displayName: '${appServiceWeb.name}_POST'
+    method: 'POST'
+
+    urlTemplate: '/*'
+  }
+}
+
+resource apiManagementServiceApisOpsPut 'Microsoft.ApiManagement/service/apis/operations@2023-03-01-preview' = {
+  name: 'apiManagementServiceApisOpsPut'
+  parent: apiManagementServiceApis
+  properties: {
+    description: ''
+    displayName: '${appServiceWeb.name}_PUT'
+    method: 'PUT'
+
+    urlTemplate: '/*'
+  }
+}
+
+resource apiManagementServiceApisOpsTrace 'Microsoft.ApiManagement/service/apis/operations@2023-03-01-preview' = {
+  name: 'apiManagementServiceApisOpsTrace'
+  parent: apiManagementServiceApis
+  properties: {
+    description: ''
+    displayName: '${appServiceWeb.name}_TRACE'
+    method: 'TRACE'
+
+    urlTemplate: '/*'
+  }
+}
+
+resource apiManagementServiceApis 'Microsoft.ApiManagement/service/apis@2023-03-01-preview' = {
+  name: appServiceWeb.name
+  parent: apiManagementService
+  properties: {
+    apiRevision: '1'
+    // apiRevisionDescription: 'string'
+    // apiType: 'string'
+    // apiVersion: 'string'
+    // apiVersionDescription: 'string'
+    // apiVersionSet: {
+    //   description: 'string'
+    //   id: 'string'
+    //   name: 'string'
+    //   versionHeaderName: 'string'
+    //   versioningScheme: 'string'
+    //   versionQueryName: 'string'
+    // }
+    // apiVersionSetId: 'string'
+    // authenticationSettings: {
+    //   oAuth2: {
+    //     authorizationServerId: 'string'
+    //     scope: 'string'
+    //   }
+    //   oAuth2AuthenticationSettings: [
+    //     {
+    //       authorizationServerId: 'string'
+    //       scope: 'string'
+    //     }
+    //   ]
+    //   openid: {
+    //     bearerTokenSendingMethods: [
+    //       'string'
+    //     ]
+    //     openidProviderId: 'string'
+    //   }
+    //   openidAuthenticationSettings: [
+    //     {
+    //       bearerTokenSendingMethods: [
+    //         'string'
+    //       ]
+    //       openidProviderId: 'string'
+    //     }
+    //   ]
+    // }
+    // contact: {
+    //   email: 'string'
+    //   name: 'string'
+    //   url: 'string'
+    // }
+    description: '${appServiceWeb.name}'
+    displayName: '${appServiceWeb.name}'
+    // format: 'string'
+    // isCurrent: bool
+    // license: {
+    //   name: 'string'
+    //   url: 'string'
+    // }
+    path: '/'
+    protocols: [
+      'https'
+    ]
+    // serviceUrl: 'string'
+    // sourceApiId: 'string'
+    // subscriptionKeyParameterNames: {
+    //   header: 'string'
+    //   query: 'string'
+    // }
+    subscriptionRequired: false
+    // termsOfServiceUrl: 'string'
+    // translateRequiredQueryParameters: 'string'
+    // type: 'string'
+    // value: 'string'
+    // wsdlSelector: {
+    //   wsdlEndpointName: 'string'
+    //   wsdlServiceName: 'string'
+    // }
+  }
+}
+
+resource apiManagemementAppInsightsDiagnostics 'Microsoft.ApiManagement/service/diagnostics@2021-08-01' = {
+  name: 'applicationinsights'
+  parent: apiManagementService
+  properties: {
+    loggerId: appInsightsAPIManagement.id
+    alwaysLog: 'allErrors'
+    logClientIp: true
+    httpCorrelationProtocol: 'W3C'
+    verbosity: 'information'
+    operationNameFormat: 'Url'
+    sampling: {
+      percentage: 100
+      samplingType: 'fixed'
+    }
+  }
+  //  dependsOn: [ appInsights ]
+}
+
+// Azure Monitor
+resource apiManagemementAzureMonitorDiagnostics 'Microsoft.ApiManagement/service/diagnostics@2021-08-01' = {
+  name: 'azuremonitor'
+  parent: apiManagementService
+  properties: {
+    loggerId: azureMonitorLoggerAPIManagement.id
+    alwaysLog: 'allErrors'
+    logClientIp: true
+    //httpCorrelationProtocol: 'W3C'
+    verbosity: 'information'
+    //operationNameFormat: 'Url'
+    sampling: {
+      percentage: 100
+      samplingType: 'fixed'
+    }
+  }
+  //  dependsOn: [ appInsights ]
+}
+
+//param deployApimPrivateEndpoint = 'no'
 
 resource apimDNSZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if ((deployAPIm == 'yes') && (deployPrivateZones == 'yes')) {
   name: 'privatelink.azure-api.net'
@@ -2171,42 +2881,65 @@ resource apimDNSZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if ((deplo
   tags: tags
 }
 
-resource apimVirtualNetworkLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = if ((deployAPIm == 'yes') && (deployPrivateZones == 'yes')) {
-  parent: apimDNSZone
-  name: 'apim-${uniqueName}-vnl'
-  location: 'global'
-  tags: tags
-  properties: {
-    virtualNetwork: {
-      id: virtualNetwork.id
-    }
-    registrationEnabled: false
-  }
-}
+// Deploye Private Endpoint for APIM
+// resource apimPrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-04-01' = if ((deployAPIm == 'yes') && (deployment == 'private')) {
+//   name: 'apim-${uniqueName}-pe'
+//   location: location
+//   tags: tags
+//   properties: {
+//     subnet: {
+//       id: virtualNetwork.properties.subnets[3].id
+//     }
+//     privateLinkServiceConnections: [
+//       {
+//         name: 'apim'
+//         properties: {
+//           privateLinkServiceId: apiManagementService.id
+//           groupIds: [
+//             'Gateway'
+//           ]
+//         }
+//       }
+//     ]
+//   }
+// }
 
-//var swaHostname = split(staticWebApp.properties.defaultHostname, '.')[0]
+// resource apimVirtualNetworkLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = if ((deployAPIm == 'yes') && (deployPrivateZones == 'yes')) {
+//   parent: apimDNSZone
+//   name: 'apim-${uniqueName}-vnl'
+//   location: 'global'
+//   tags: tags
+//   properties: {
+//     virtualNetwork: {
+//       id: virtualNetwork.id
+//     }
+//     registrationEnabled: false
+//   }
+// }
 
-resource apimSymbolicname 'Microsoft.Network/privateDnsZones/A@2020-06-01' = if ((deployAPIm == 'yes') && (deployPrivateZones == 'yes')) {
-  name: apiManagementService.name
-  //name: swaHostname
-  //name: staticWebApp
-  parent: apimDNSZone
+// //var swaHostname = split(staticWebApp.properties.defaultHostname, '.')[0]
 
-  properties: {
-    ttl: 3600
+// resource apimSymbolicname 'Microsoft.Network/privateDnsZones/A@2020-06-01' = if ((deployAPIm == 'yes') && (deployPrivateZones == 'yes')) {
+//   name: apiManagementService.name
+//   //name: swaHostname
+//   //name: staticWebApp
+//   parent: apimDNSZone
 
-    aRecords: [
-      {
-        //  ipv4Address: '192.168.1.1'
+//   properties: {
+//     ttl: 3600
 
-        ipv4Address: apimPrivateEndpoint.properties.customDnsConfigs[0].ipAddresses[0]
-      }
-    ]
+//     aRecords: [
+//       {
+//         //  ipv4Address: '192.168.1.1'
 
-  }
+//         ipv4Address: apimPrivateEndpoint.properties.customDnsConfigs[0].ipAddresses[0]
+//       }
+//     ]
 
-  dependsOn: []
-}
+//   }
+
+//   dependsOn: []
+// }
 
 @description('Remote Vnet')
 param remoteVirtualNetworkId string = '/subscriptions/11b1e7dd-d35d-435f-9c04-274e5e673671/resourceGroups/usnc-core01/providers/Microsoft.Network/virtualNetworks/usnc-vnet-core01'
@@ -2257,7 +2990,8 @@ var azureStaticAppsArecord = {
 }
 var azureAPIMArecord = {
   name: apiManagementService.name
-  ip: apimPrivateEndpoint.properties.customDnsConfigs[0].ipAddresses[0]
+  ip: '192.168.1.2'
+  //apimPrivateEndpoint.properties.customDnsConfigs[0].ipAddresses[0]
 }
 var azureWebsitesArecord = {
   name: appServiceWeb.name
@@ -2342,3 +3076,4 @@ output cosmosPrivateIps object = cosmosPrivateEndpoint.properties.customDnsConfi
 output apiManagementEndpoint string = apiManagementService.properties.gatewayUrl
 
 output apiManagementName string = apiManagementService.name
+output ApiManagementpublicip string = apimPublicIp.properties.ipAddress

@@ -25,7 +25,7 @@ param(
     $FrontendClientId,
 
     [Parameter()]
-    [bool]
+    [string]
     # Name of the previously deployed Azure deployment
     $UseApim,
 
@@ -63,10 +63,13 @@ Write-Host "webapiName: $webapiName"
 Write-Host "webapiUrl: $webapiUrl"
 
 
-if ($UseApim -eq $true) {
+if ($UseApim -eq 'yes') {
     Write-Host "Using APIM backend"
     $apimUrl = $deployment.properties.outputs.apiManagementEndpoint.value.substring(8)
     $apimName = $deployment.properties.outputs.apiManagementName.value
+
+    Write-Host "webapiName: $apimName"
+    Write-Host "webapiUrl: $apimUrl"
 }
 
 $webapiSettings = $(az webapp config appsettings list --name $webapiName --resource-group $ResourceGroupName | ConvertFrom-JSON)
@@ -80,7 +83,7 @@ $PSDefaultParameterValues['Out-File:Encoding'] = 'ascii'
 
 $envFilePath = "$PSScriptRoot/../../webapp/.env"
 Write-Host "Writing environment variables to '$envFilePath'..."
-if ($UseApim -eq $true) {
+if ($UseApim -eq 'yes') {
     "REACT_APP_BACKEND_URI=https://$apimUrl/" | Out-File -FilePath $envFilePath
     "REACT_APP_API_URL=https://$apimUrl/" | Out-File -FilePath $envFilePath -Append
 }

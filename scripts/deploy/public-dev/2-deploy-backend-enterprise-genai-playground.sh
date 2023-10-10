@@ -3,7 +3,7 @@ az account set --subscription f622d6d5-7dd6-4999-9e7a-3401833df0e6
 
 cd ..
 ./deploy-webapi.sh --subscription f622d6d5-7dd6-4999-9e7a-3401833df0e6 \
---resource-group rg-enterprise-genai-playground-2 \
---deployment-name enterprise-genai-playground-2 \
+--resource-group rg-enterprise-genai-playground-dev \
+--deployment-name enterprise-genai-playground-dev \
 
-cd ./public2
+cd ./public-dev

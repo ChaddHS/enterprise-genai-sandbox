@@ -1,6 +1,6 @@
 #!/bin/bash
 
-RG="enterprise-genai-playground-2"
+RG="enterprise-genai-playground-dev"
 
 unquie_name=copichat-wnn2d4dhf3lom
 

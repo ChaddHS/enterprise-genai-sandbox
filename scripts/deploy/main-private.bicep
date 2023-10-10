@@ -719,7 +719,7 @@ resource openaiSymbolicname2 'Microsoft.Network/privateDnsZones/A@2020-06-01' = 
 //   }
 // }
 
-resource openAI_completionModel 'Microsoft.CognitiveServices/accounts/deployments@2022-12-01' = if (deployNewAzureOpenAI) {
+resource openAI_completionModel 'Microsoft.CognitiveServices/accounts/deployments@2023-05-01' = if (deployNewAzureOpenAI) {
   //resource openAI_completionModel 'Microsoft.CognitiveServices/accounts/deployments@2022-12-01' = if (deployNewAzureOpenAI) {
   parent: openAI
   name: completionModel
@@ -731,19 +731,19 @@ resource openAI_completionModel 'Microsoft.CognitiveServices/accounts/deployment
       name: completionModel
       // version: modelVersion
     }
-    scaleSettings: {
-      //  capacity: 30
-      scaleType: 'Standard'
-    }
+    // scaleSettings: {
+    //   capacity: 8
+    //   scaleType: 'Standard'
+    // }
   }
-  // sku: {
-  //   name: 'S0'
-  //   //capacity: 120
-  //   tier: 'Standard'
-  // }
+  sku: {
+    name: 'Standard'
+    capacity: 8
+    //tier: 'Standard'
+  }
 }
 
-resource openAI_embeddingModel 'Microsoft.CognitiveServices/accounts/deployments@2022-12-01' = if (deployNewAzureOpenAI) {
+resource openAI_embeddingModel 'Microsoft.CognitiveServices/accounts/deployments@2023-05-01' = if (deployNewAzureOpenAI) {
   //resource openAI_embeddingModel 'Microsoft.CognitiveServices/accounts/deployments@2022-12-01' = if (deployNewAzureOpenAI) {
   parent: openAI
   name: embeddingModel
@@ -754,12 +754,16 @@ resource openAI_embeddingModel 'Microsoft.CognitiveServices/accounts/deployments
       // version: modelVersion
     }
 
-    scaleSettings: {
-      //  capacity: 30
-      scaleType: 'Standard'
-    }
+    // scaleSettings: {
+    //   capacity: 8
+    //   scaleType: 'Standard'
+    // }
   }
-
+  sku: {
+    name: 'Standard'
+    capacity: 8
+    //tier: 'Standard'
+  }
   //   sku: {
   //     name: 'S0'
   //     capacity: 10

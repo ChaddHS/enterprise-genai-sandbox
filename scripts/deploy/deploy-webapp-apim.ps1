@@ -85,12 +85,12 @@ $envFilePath = "$PSScriptRoot/../../webapp/.env"
 Write-Host "Writing environment variables to '$envFilePath'..."
 if ($UseApim -eq 'yes') {
     "REACT_APP_BACKEND_URI=https://$apimUrl/" | Out-File -FilePath $envFilePath
-    "REACT_APP_API_URL=https://$apimUrl/" | Out-File -FilePath $envFilePath -Append
+    "REACT_APP_BACKEND_WEBSOCKET_URI=https://$webapiUrl/" | Out-File -FilePath $envFilePath  -Append
 }
 else {
     "REACT_APP_BACKEND_URI=https://$webapiUrl/" | Out-File -FilePath $envFilePath 
+    "REACT_APP_BACKEND_WEBSOCKET_URI=https://$webapiUrl/" | Out-File -FilePath $envFilePath -Append
 }
-
 "REACT_APP_AUTH_TYPE=AzureAd" | Out-File -FilePath $envFilePath -Append
 "REACT_APP_AAD_AUTHORITY=$($webapiInstance.Trim("/"))/$webapiTenantId" | Out-File -FilePath $envFilePath -Append
 "REACT_APP_AAD_CLIENT_ID=$FrontendClientId" | Out-File -FilePath $envFilePath -Append
